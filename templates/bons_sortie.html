@@ -9,37 +9,71 @@
     <a href="{{ url_for('nouveau_bon_sortie') }}" class="btn btn-primary">📤 Nouveau bon</a>
   </div>
 </div>
-<div class="card">
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr><th>N°</th><th>Date</th><th>Demandeur</th><th>Chantier</th><th>Article</th><th>Désignation</th><th>Qté</th><th>Unité</th><th>Montant</th><th>Commentaire</th><th>Actions</th></tr>
-  </thead>
-  <tbody>
-  {% for b in bons %}
-  <tr>
-    <td><strong style="color:#E8661A">{{ b['numero'] }}</strong></td>
-    <td>{{ b['date_sortie'] }}</td>
-    <td><strong>{{ b['demandeur'] }}</strong></td>
-    <td style="font-size:.78rem">{{ b['chantier_nom'] or '—' }}</td>
-    <td><code style="font-size:.72rem">{{ b['article_id'] }}</code></td>
-    <td>{{ b['designation'] or '—' }}</td>
-    <td><strong>{{ b['quantite'] }}</strong></td>
-    <td style="font-size:.72rem;color:#888">{{ b['unite'] or '' }}</td>
-    <td><strong>{{ "%.2f"|format(b['quantite'] * (b['prix_achat'] or 0)) }} €</strong></td>
-    <td style="font-size:.75rem;color:#666">{{ b['commentaire'] or '—' }}</td>
-    <td style="white-space:nowrap">
-      <a href="{{ url_for('imprimer_bon_sortie', id=b['id']) }}" target="_blank" class="btn btn-outline btn-sm" title="Imprimer">🖨️</a>
-      <form method="POST" action="{{ url_for('supprimer_bon_sortie', id=b['id']) }}" style="display:inline" onsubmit="return confirm('Supprimer ce bon ? Le stock sera restauré.')">
-        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+
+{% for row in bons %}
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f2f5">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#E8661A">{{ row.bon['numero'] }}</div>
+        <div style="font-size:.72rem;color:#888">{{ row.bon['date_sortie'] }}</div>
+      </div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;color:#1a1a2e">👤 {{ row.bon['demandeur'] }}</div>
+        {% if row.bon['chantier_nom'] %}
+        <div style="font-size:.72rem;color:#888">🏗️ {{ row.bon['chantier_nom'] }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <span style="font-size:.78rem;font-weight:700;color:#555">{{ row.nb }} article(s)</span>
+        <span style="margin-left:8px;font-size:.9rem;font-weight:800;color:#E8661A">{{ "%.2f"|format(row.montant) }} €</span>
+      </div>
+      {% if row.bon['commentaire'] %}
+      <div style="font-size:.75rem;color:#888;font-style:italic">💬 {{ row.bon['commentaire'] }}</div>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="badge badge-ok">✅ Validé</span>
+      <a href="{{ url_for('imprimer_bon_sortie', id=row.bon['id']) }}" target="_blank" class="btn btn-outline btn-sm">🖨️ Imprimer</a>
+      <form method="POST" action="{{ url_for('supprimer_bon_sortie', id=row.bon['id']) }}" style="display:inline"
+        onsubmit="return confirm('Supprimer ce bon ? Les stocks seront restaurés.')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑 Supprimer</button>
       </form>
-    </td>
-  </tr>
-  {% else %}
-  <tr><td colspan="11" style="text-align:center;padding:30px;color:#888">Aucun bon de sortie</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Article</th><th>Désignation</th><th>Unité</th><th style="text-align:right">Quantité</th><th style="text-align:right">Prix u. (€)</th><th style="text-align:right">Montant (€)</th></tr>
+    </thead>
+    <tbody>
+    {% for l in row.lignes %}
+    <tr>
+      <td style="color:#E8661A;font-weight:700">{{ loop.index }}</td>
+      <td><code style="font-size:.72rem">{{ l['article_id'] }}</code></td>
+      <td><strong>{{ l['designation'] or l['article_id'] }}</strong></td>
+      <td style="font-size:.75rem;color:#888">{{ l['unite'] or '—' }}</td>
+      <td style="text-align:right"><strong>{{ l['quantite'] }}</strong></td>
+      <td style="text-align:right">{{ "%.2f"|format(l['prix_achat'] or 0) }} €</td>
+      <td style="text-align:right"><strong>{{ "%.2f"|format(l['quantite']*(l['prix_achat'] or 0)) }} €</strong></td>
+    </tr>
+    {% endfor %}
+    <tr style="background:#f8f9fa;border-top:2px solid #e0e0e0">
+      <td colspan="4" style="text-align:right;font-weight:700;font-size:.8rem;color:#555">TOTAL BON</td>
+      <td style="text-align:right;font-weight:700">{{ row.lignes|sum(attribute='quantite') }}</td>
+      <td></td>
+      <td style="text-align:right;font-weight:800;color:#E8661A">{{ "%.2f"|format(row.montant) }} €</td>
+    </tr>
+    </tbody>
+  </table>
+  </div>
 </div>
+{% else %}
+<div class="card" style="text-align:center;padding:40px;color:#888">
+  <div style="font-size:2rem;margin-bottom:10px">📤</div>
+  <div>Aucun bon de sortie</div>
+  <a href="{{ url_for('nouveau_bon_sortie') }}" class="btn btn-primary" style="margin-top:14px">Créer un bon</a>
 </div>
+{% endfor %}
 {% endblock %}

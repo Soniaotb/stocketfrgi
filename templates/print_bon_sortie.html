@@ -7,36 +7,31 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;background:#fff;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #E8661A;padding-bottom:14px;margin-bottom:18px}
-.logo h1{font-size:1.6rem;font-weight:900;color:#1a1a2e}.logo span{color:#E8661A}
-.logo p{font-size:.75rem;color:#666;margin-top:2px}
+.logo h1{font-size:1.5rem;font-weight:900;color:#1a1a2e}.logo span{color:#E8661A}
+.logo p{font-size:.72rem;color:#666;margin-top:2px}
 .doc-title{text-align:right}
-.doc-title h2{font-size:1.3rem;font-weight:800;color:#E8661A;text-transform:uppercase}
-.doc-title .num{font-size:1.1rem;font-weight:700;color:#1a1a2e;background:#f0f2f5;padding:4px 12px;border-radius:6px;display:inline-block;margin-top:4px}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.doc-title h2{font-size:1.2rem;font-weight:800;color:#E8661A;text-transform:uppercase}
+.doc-title .num{font-size:1rem;font-weight:700;background:#f0f2f5;padding:4px 12px;border-radius:6px;display:inline-block;margin-top:4px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
 .info-box{border:1px solid #e0e0e0;border-radius:8px;padding:12px}
-.info-box h3{font-size:.78rem;text-transform:uppercase;color:#E8661A;font-weight:700;margin-bottom:8px;letter-spacing:.5px}
+.info-box h3{font-size:.75rem;text-transform:uppercase;color:#E8661A;font-weight:700;margin-bottom:8px}
 .info-row{display:flex;margin-bottom:4px}
-.info-label{font-weight:600;min-width:120px;color:#555;font-size:.8rem}
-.info-val{color:#111;font-size:.82rem}
-table{width:100%;border-collapse:collapse;margin-bottom:20px}
-thead th{background:#1a1a2e;color:#fff;padding:8px 10px;text-align:left;font-size:.78rem;text-transform:uppercase;letter-spacing:.4px}
-tbody td{padding:8px 10px;border-bottom:1px solid #e8e8e8;font-size:.82rem}
-tbody tr:last-child td{border-bottom:2px solid #1a1a2e}
-.total-row td{background:#f8f9fa;font-weight:700}
-.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:30px}
-.sig-box{border:1px solid #ccc;border-radius:8px;padding:16px;min-height:100px}
-.sig-box h4{font-size:.78rem;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:8px}
-.sig-line{border-bottom:1px dashed #aaa;margin-top:40px;margin-bottom:6px}
-.sig-label{font-size:.72rem;color:#888;text-align:center}
-.footer{margin-top:30px;text-align:center;font-size:.7rem;color:#aaa;border-top:1px solid #e0e0e0;padding-top:10px}
-.badge-statut{display:inline-block;padding:3px 10px;border-radius:20px;font-weight:700;font-size:.75rem;background:#dcfce7;color:#166534}
-.no-print{margin-bottom:16px;display:flex;gap:10px}
-.btn-print{background:#E8661A;color:#fff;border:none;padding:9px 20px;border-radius:7px;font-size:.88rem;font-weight:700;cursor:pointer}
-.btn-back{background:#f0f2f5;color:#333;border:none;padding:9px 20px;border-radius:7px;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-block}
-@media print{
-  .no-print{display:none!important}
-  body{padding:10px}
-}
+.info-label{font-weight:600;min-width:110px;color:#555;font-size:.78rem}
+.info-val{font-size:.8rem}
+table{width:100%;border-collapse:collapse;margin-bottom:18px}
+thead th{background:#1a1a2e;color:#fff;padding:7px 10px;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.3px}
+tbody td{padding:7px 10px;border-bottom:1px solid #eee;font-size:.8rem}
+.total-row td{background:#fff8f0;font-weight:700;border-top:2px solid #E8661A}
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+.sig-box{border:1px solid #ccc;border-radius:8px;padding:14px;min-height:90px}
+.sig-box h4{font-size:.75rem;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:6px}
+.sig-line{border-bottom:1px dashed #aaa;margin-top:38px;margin-bottom:5px}
+.sig-label{font-size:.7rem;color:#888;text-align:center}
+.footer{margin-top:24px;text-align:center;font-size:.68rem;color:#aaa;border-top:1px solid #e0e0e0;padding-top:8px}
+.no-print{margin-bottom:14px;display:flex;gap:10px}
+.btn-print{background:#E8661A;color:#fff;border:none;padding:8px 18px;border-radius:7px;font-size:.85rem;font-weight:700;cursor:pointer}
+.btn-back{background:#f0f2f5;color:#333;border:none;padding:8px 18px;border-radius:7px;font-size:.85rem;cursor:pointer;text-decoration:none;display:inline-block}
+@media print{.no-print{display:none!important}body{padding:8px}}
 </style>
 </head>
 <body>
@@ -49,18 +44,17 @@ tbody tr:last-child td{border-bottom:2px solid #1a1a2e}
   <div class="logo">
     <h1>📦 Stock<span>ETF</span></h1>
     <p>Gestion de stock — Chantier Ferroviaire CN</p>
-    <p style="margin-top:4px;font-size:.72rem;color:#888">Imprimé le {{ bon['date_sortie'] }}</p>
   </div>
   <div class="doc-title">
-    <h2>Bon de Sortie</h2>
+    <h2>📤 Bon de Sortie</h2>
     <div class="num">{{ bon['numero'] }}</div>
-    <div style="margin-top:6px"><span class="badge-statut">✅ VALIDÉ</span></div>
+    <div style="margin-top:5px;font-size:.72rem;color:#888">Émis le {{ bon['date_sortie'] }}</div>
   </div>
 </div>
 
 <div class="info-grid">
   <div class="info-box">
-    <h3>📋 Informations sortie</h3>
+    <h3>📋 Informations</h3>
     <div class="info-row"><span class="info-label">N° bon :</span><span class="info-val"><strong>{{ bon['numero'] }}</strong></span></div>
     <div class="info-row"><span class="info-label">Date :</span><span class="info-val">{{ bon['date_sortie'] }}</span></div>
     <div class="info-row"><span class="info-label">Demandeur :</span><span class="info-val"><strong>{{ bon['demandeur'] }}</strong></span></div>
@@ -75,62 +69,63 @@ tbody tr:last-child td{border-bottom:2px solid #1a1a2e}
     {% else %}
     <div class="info-row"><span class="info-val" style="color:#888">Aucun chantier associé</span></div>
     {% endif %}
-    {% if bon['container_nom'] %}
-    <div class="info-row" style="margin-top:6px"><span class="info-label">Container source :</span><span class="info-val">{{ bon['container_nom'] }}</span></div>
-    {% endif %}
   </div>
 </div>
 
 <table>
   <thead>
     <tr>
-      <th>Réf. Article</th>
-      <th>Désignation</th>
-      <th>Référence</th>
-      <th>Marque</th>
-      <th>Unité</th>
-      <th style="text-align:right">Quantité</th>
-      <th style="text-align:right">Prix unit. (€)</th>
-      <th style="text-align:right">Montant (€)</th>
+      <th>#</th><th>Réf.</th><th>Désignation</th><th>Référence fab.</th><th>Marque</th>
+      <th>Container</th><th>Unité</th>
+      <th style="text-align:right">Qté</th>
+      <th style="text-align:right">Prix u. €</th>
+      <th style="text-align:right">Montant €</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td><strong>{{ bon['article_id'] }}</strong></td>
-      <td><strong>{{ bon['designation'] or '—' }}</strong></td>
-      <td>{{ bon['reference'] or '—' }}</td>
-      <td>{{ bon['marque'] or '—' }}</td>
-      <td>{{ bon['unite'] or '—' }}</td>
-      <td style="text-align:right"><strong>{{ bon['quantite'] }}</strong></td>
-      <td style="text-align:right">{{ "%.2f"|format(bon['prix_achat'] or 0) }}</td>
-      <td style="text-align:right"><strong>{{ "%.2f"|format(bon['quantite'] * (bon['prix_achat'] or 0)) }}</strong></td>
-    </tr>
-    <tr class="total-row">
-      <td colspan="5" style="text-align:right">TOTAL</td>
-      <td style="text-align:right">{{ bon['quantite'] }}</td>
-      <td></td>
-      <td style="text-align:right">{{ "%.2f"|format(bon['quantite'] * (bon['prix_achat'] or 0)) }} €</td>
-    </tr>
+  {% set total_qte = namespace(v=0) %}
+  {% set total_mt = namespace(v=0) %}
+  {% for l in lignes %}
+  {% set montant = l['quantite'] * (l['prix_achat'] or 0) %}
+  {% set total_qte.v = total_qte.v + l['quantite'] %}
+  {% set total_mt.v = total_mt.v + montant %}
+  <tr>
+    <td style="color:#E8661A;font-weight:700">{{ loop.index }}</td>
+    <td><strong>{{ l['article_id'] }}</strong></td>
+    <td><strong>{{ l['designation'] or '—' }}</strong></td>
+    <td style="color:#888;font-size:.75rem">{{ l['reference'] or '—' }}</td>
+    <td style="color:#888;font-size:.75rem">{{ l['marque'] or '—' }}</td>
+    <td style="font-size:.75rem">{{ l['container_nom'] or '—' }}</td>
+    <td>{{ l['unite'] or '—' }}</td>
+    <td style="text-align:right"><strong>{{ l['quantite'] }}</strong></td>
+    <td style="text-align:right">{{ "%.2f"|format(l['prix_achat'] or 0) }}</td>
+    <td style="text-align:right"><strong>{{ "%.2f"|format(montant) }}</strong></td>
+  </tr>
+  {% endfor %}
+  <tr class="total-row">
+    <td colspan="7" style="text-align:right;font-size:.82rem">TOTAL BON DE SORTIE</td>
+    <td style="text-align:right">{{ total_qte.v }}</td>
+    <td></td>
+    <td style="text-align:right;color:#E8661A;font-size:.95rem">{{ "%.2f"|format(total_mt.v) }} €</td>
+  </tr>
   </tbody>
 </table>
 
 <div class="signatures">
   <div class="sig-box">
     <h4>✍️ Signature magasinier</h4>
-    <p style="font-size:.75rem;color:#666">Remis par :</p>
+    <p style="font-size:.72rem;color:#666">Remis par :</p>
     <div class="sig-line"></div>
     <div class="sig-label">Nom, date et signature</div>
   </div>
   <div class="sig-box">
     <h4>✍️ Signature réceptionnaire</h4>
-    <p style="font-size:.75rem;color:#666">Reçu par : <strong>{{ bon['demandeur'] }}</strong></p>
+    <p style="font-size:.72rem;color:#666">Reçu par : <strong>{{ bon['demandeur'] }}</strong></p>
     <div class="sig-line"></div>
-    <div class="sig-label">Nom, date et signature</div>
+    <div class="sig-label">Nom, date et signature — Bon pour accord</div>
   </div>
 </div>
 
-<div class="footer">
-  StockETF CN — Document généré automatiquement — {{ bon['numero'] }}
-</div>
+<div class="footer">StockETF CN — {{ bon['numero'] }} — Document généré automatiquement</div>
 </body>
 </html>

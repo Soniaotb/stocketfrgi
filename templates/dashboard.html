@@ -83,13 +83,13 @@
     <table>
       <thead><tr><th>N°</th><th>Date</th><th>Demandeur</th><th>Article</th><th>Qté</th></tr></thead>
       <tbody>
-      {% for b in bons_s %}
+      {% for row in bons_s %}
       <tr>
-        <td><strong style="color:#E8661A">{{ b['numero'] }}</strong></td>
-        <td>{{ b['date_sortie'] }}</td>
-        <td>{{ b['demandeur'] }}</td>
-        <td>{{ (b['designation'] or b['article_id'])[:25] }}</td>
-        <td><strong>{{ b['quantite'] }}</strong></td>
+        <td><strong style="color:#E8661A">{{ row.bon['numero'] }}</strong></td>
+        <td>{{ row.bon['date_sortie'] }}</td>
+        <td>{{ row.bon['demandeur'] }}</td>
+        <td>{% if row.first %}{{ (row.first['designation'] or row.first['article_id'])[:22] }}{% if row.nb > 1 %} +{{ row.nb-1 }}{% endif %}{% else %}—{% endif %}</td>
+        <td><strong>{{ row.nb }} art.</strong></td>
       </tr>
       {% endfor %}
       </tbody>
