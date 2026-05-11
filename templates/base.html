@@ -76,9 +76,17 @@ tbody td{padding:8px 11px;vertical-align:middle}
 .stock-num.critique{color:var(--critique)}.stock-num.rupture{color:var(--rupture)}
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
 .page-header h2{font-size:1rem;font-weight:800;color:var(--navy)}
-.nav-submenu{overflow:hidden;transition:max-height .3s ease}
-.nav-submenu.closed{max-height:0}
-.nav-submenu.open{max-height:600px}
+.nav-submenu{overflow:hidden;transition:max-height .35s ease}
+.nav-submenu.closed{max-height:0!important}
+.nav-submenu.open{max-height:800px}
+.nav-section-toggle{display:flex;justify-content:space-between;align-items:center;padding:10px 14px 3px;font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);font-weight:700;cursor:pointer;user-select:none;border-radius:4px;transition:.15s}
+.nav-section-toggle:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.7)}
+.nav-arrow{transition:transform .25s;font-size:.55rem}
+.nav-sub{padding-left:26px!important;font-size:.76rem!important;opacity:.85}
+.nav-sub:hover{opacity:1}
+.nav-badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:.62rem;font-weight:700;margin-left:auto}
+.nav-badge.red{background:#dc2626;color:#fff}
+.nav-badge.amber{background:#d97706;color:#fff}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
 @media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}.sidebar{width:180px}.main{margin-left:180px}}
@@ -92,54 +100,99 @@ tbody td{padding:8px 11px;vertical-align:middle}
   </div>
   <div class="sidebar-nav">
     <div class="nav-section">Principal</div>
-    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}"><span class="ico">🏠</span>Tableau de bord</a>
-    <a href="{{ url_for('catalogue') }}" class="nav-link {% if 'article' in request.endpoint or request.endpoint=='catalogue' %}active{% endif %}"><span class="ico">🗄️</span>Catalogue (348)</a>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
+      <span class="ico">🏠</span>Tableau de bord
+      {% if nav_ruptures > 0 %}<span class="nav-badge red">{{ nav_ruptures }}</span>{% endif %}
+    </a>
+    <a href="{{ url_for('catalogue') }}" class="nav-link {% if 'article' in request.endpoint or request.endpoint=='catalogue' %}active{% endif %}">
+      <span class="ico">🗄️</span>Catalogue
+    </a>
 
-    <!-- Containers déroulant -->
-    <div class="nav-section" style="cursor:pointer;user-select:none" onclick="toggleMenu('menu-containers')">
-      📦 Containers <span id="arrow-containers" style="float:right;transition:.2s">▼</span>
+    <!-- CONTAINERS — 100% dynamique -->
+    <div class="nav-section-toggle" onclick="toggleMenu('menu-containers')">
+      <span>📦 Containers</span>
+      <span id="arrow-containers" class="nav-arrow">▼</span>
     </div>
-    <div id="menu-containers" class="nav-submenu">
-      <a href="{{ url_for('containers') }}" class="nav-link {% if request.endpoint=='containers' %}active{% endif %}"><span class="ico">📦</span>Tous les containers</a>
-      <a href="{{ url_for('container_stock', id=1) }}" class="nav-link {% if request.endpoint=='container_stock' and request.view_args.get('id')==1 %}active{% endif %}" style="padding-left:22px"><span class="ico">🔵</span>Container BLEU</a>
-      <a href="{{ url_for('container_stock', id=2) }}" class="nav-link" style="padding-left:22px"><span class="ico">5️⃣</span>Container 5</a>
-      <a href="{{ url_for('container_stock', id=3) }}" class="nav-link" style="padding-left:22px"><span class="ico">3️⃣</span>Container 3</a>
-      <a href="{{ url_for('container_stock', id=4) }}" class="nav-link" style="padding-left:22px"><span class="ico">9️⃣</span>Container 9</a>
-      <a href="{{ url_for('container_stock', id=5) }}" class="nav-link" style="padding-left:22px"><span class="ico">🔧</span>Container Fabrice</a>
-      <a href="{{ url_for('transferts') }}" class="nav-link {% if 'transfert' in request.endpoint %}active{% endif %}" style="padding-left:22px"><span class="ico">🔀</span>Transferts</a>
-    </div>
-
-    <!-- Mouvements déroulant -->
-    <div class="nav-section" style="cursor:pointer;user-select:none" onclick="toggleMenu('menu-mouvements')">
-      📋 Mouvements <span id="arrow-mouvements" style="float:right;transition:.2s">▼</span>
-    </div>
-    <div id="menu-mouvements" class="nav-submenu">
-      <a href="{{ url_for('bons_sortie') }}" class="nav-link {% if 'sortie' in request.endpoint %}active{% endif %}"><span class="ico">📤</span>Bons de Sortie</a>
-      <a href="{{ url_for('nouveau_bon_sortie') }}" class="nav-link" style="padding-left:22px"><span class="ico">➕</span>Nouveau bon sortie</a>
-      <a href="{{ url_for('bons_reception') }}" class="nav-link {% if 'reception' in request.endpoint %}active{% endif %}"><span class="ico">📥</span>Bons de Réception</a>
-      <a href="{{ url_for('nouveau_bon_reception') }}" class="nav-link" style="padding-left:22px"><span class="ico">➕</span>Nouveau bon récep.</a>
-      <a href="{{ url_for('commandes') }}" class="nav-link {% if 'commande' in request.endpoint %}active{% endif %}"><span class="ico">📋</span>Commandes</a>
-      <a href="{{ url_for('nouvelle_commande') }}" class="nav-link" style="padding-left:22px"><span class="ico">➕</span>Nouvelle commande</a>
-      <a href="{{ url_for('inventaire') }}" class="nav-link {% if 'inventaire' in request.endpoint %}active{% endif %}"><span class="ico">📊</span>Inventaire</a>
-      <a href="{{ url_for('mouvements') }}" class="nav-link {% if request.endpoint=='mouvements' %}active{% endif %}"><span class="ico">🔄</span>Historique</a>
+    <div id="menu-containers" class="nav-submenu open">
+      <a href="{{ url_for('containers') }}" class="nav-link {% if request.endpoint=='containers' %}active{% endif %}">
+        <span class="ico">📦</span>Tous les containers
+      </a>
+      {% for ct in nav_containers %}
+      <a href="{{ url_for('container_stock', id=ct.id) }}"
+         class="nav-link nav-sub {% if request.endpoint=='container_stock' and request.view_args and request.view_args.get('id')==ct.id %}active{% endif %}">
+        <span class="ico">▸</span>{{ ct.nom }}
+        {% if ct.statut == 'EN DEPLACEMENT' %}<span style="font-size:.6rem;color:#f59e0b">🚛</span>{% endif %}
+      </a>
+      {% endfor %}
+      <a href="{{ url_for('transferts') }}" class="nav-link {% if 'transfert' in request.endpoint %}active{% endif %}">
+        <span class="ico">🔀</span>Transferts
+      </a>
     </div>
 
-    <!-- Gestion déroulant -->
-    <div class="nav-section" style="cursor:pointer;user-select:none" onclick="toggleMenu('menu-gestion')">
-      ⚙️ Gestion <span id="arrow-gestion" style="float:right;transition:.2s">▼</span>
+    <!-- MOUVEMENTS -->
+    <div class="nav-section-toggle" onclick="toggleMenu('menu-mouvements')">
+      <span>📋 Mouvements</span>
+      <span id="arrow-mouvements" class="nav-arrow">▼</span>
     </div>
-    <div id="menu-gestion" class="nav-submenu">
-      <a href="{{ url_for('chantiers') }}" class="nav-link {% if 'chantier' in request.endpoint %}active{% endif %}"><span class="ico">🏗️</span>Chantiers</a>
-      <a href="{{ url_for('fournisseurs') }}" class="nav-link {% if 'fournisseur' in request.endpoint %}active{% endif %}"><span class="ico">🏭</span>Fournisseurs</a>
-      <a href="{{ url_for('familles') }}" class="nav-link {% if 'famille' in request.endpoint %}active{% endif %}"><span class="ico">🏷️</span>Familles</a>
+    <div id="menu-mouvements" class="nav-submenu open">
+      <a href="{{ url_for('bons_sortie') }}" class="nav-link {% if 'sortie' in request.endpoint %}active{% endif %}">
+        <span class="ico">📤</span>Bons de Sortie
+      </a>
+      <a href="{{ url_for('nouveau_bon_sortie') }}" class="nav-link nav-sub">
+        <span class="ico">➕</span>Nouveau bon sortie
+      </a>
+      <a href="{{ url_for('bons_reception') }}" class="nav-link {% if 'reception' in request.endpoint %}active{% endif %}">
+        <span class="ico">📥</span>Bons de Réception
+      </a>
+      <a href="{{ url_for('nouveau_bon_reception') }}" class="nav-link nav-sub">
+        <span class="ico">➕</span>Nouveau bon récep.
+      </a>
+      <a href="{{ url_for('commandes') }}" class="nav-link {% if 'commande' in request.endpoint %}active{% endif %}">
+        <span class="ico">📋</span>Commandes
+        {% if nav_cmds_att > 0 %}<span class="nav-badge amber">{{ nav_cmds_att }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('nouvelle_commande') }}" class="nav-link nav-sub">
+        <span class="ico">➕</span>Nouvelle commande
+      </a>
+      <a href="{{ url_for('inventaire') }}" class="nav-link {% if 'inventaire' in request.endpoint %}active{% endif %}">
+        <span class="ico">📊</span>Inventaire
+      </a>
+      <a href="{{ url_for('mouvements') }}" class="nav-link {% if request.endpoint=='mouvements' %}active{% endif %}">
+        <span class="ico">🔄</span>Historique
+      </a>
     </div>
 
+    <!-- GESTION — chantiers et familles dynamiques -->
+    <div class="nav-section-toggle" onclick="toggleMenu('menu-gestion')">
+      <span>⚙️ Gestion</span>
+      <span id="arrow-gestion" class="nav-arrow">▼</span>
+    </div>
+    <div id="menu-gestion" class="nav-submenu open">
+      <a href="{{ url_for('chantiers') }}" class="nav-link {% if 'chantier' in request.endpoint %}active{% endif %}">
+        <span class="ico">🏗️</span>Chantiers
+        <span style="font-size:.68rem;color:rgba(255,255,255,.35)">({{ nav_chantiers|length }})</span>
+      </a>
+      <a href="{{ url_for('fournisseurs') }}" class="nav-link {% if 'fournisseur' in request.endpoint %}active{% endif %}">
+        <span class="ico">🏭</span>Fournisseurs
+      </a>
+      <a href="{{ url_for('familles') }}" class="nav-link {% if 'famille' in request.endpoint %}active{% endif %}">
+        <span class="ico">🏷️</span>Familles
+        <span style="font-size:.68rem;color:rgba(255,255,255,.35)">({{ nav_familles|length }})</span>
+      </a>
+    </div>
+
+    <!-- ANALYSE -->
     <div class="nav-section">Analyse</div>
-    <a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint=='analytics' %}active{% endif %}"><span class="ico">📈</span>Analytics</a>
+    <a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint=='analytics' %}active{% endif %}">
+      <span class="ico">📈</span>Analytics
+      {% if nav_alertes > 0 %}<span class="nav-badge amber">{{ nav_alertes }}</span>{% endif %}
+    </a>
 
     {% if session.user_role in ['admin','responsable'] %}
     <div class="nav-section">Admin</div>
-    <a href="{{ url_for('parametres') }}" class="nav-link {% if request.endpoint=='parametres' %}active{% endif %}"><span class="ico">⚙️</span>Paramètres</a>
+    <a href="{{ url_for('parametres') }}" class="nav-link {% if request.endpoint=='parametres' %}active{% endif %}">
+      <span class="ico">⚙️</span>Paramètres
+    </a>
     {% endif %}
   </div>
   <div class="sidebar-footer">Base arrière ETF Dense — v3.0</div>
@@ -170,36 +223,17 @@ function toggleMenu(id) {
   var el = document.getElementById(id);
   var menuId = id.replace('menu-','');
   var arrow = document.getElementById('arrow-'+menuId);
+  if (!el) return;
   if (el.classList.contains('open')) {
-    el.classList.remove('open'); el.classList.add('closed');
-    if(arrow) arrow.textContent='▶';
+    el.classList.remove('open');
+    el.classList.add('closed');
+    if (arrow) arrow.style.transform = 'rotate(-90deg)';
   } else {
-    el.classList.remove('closed'); el.classList.add('open');
-    if(arrow) arrow.textContent='▼';
+    el.classList.remove('closed');
+    el.classList.add('open');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
   }
 }
-// Ouvrir les menus actifs par défaut
-document.addEventListener('DOMContentLoaded', function() {
-  var menus = ['menu-containers','menu-mouvements','menu-gestion'];
-  menus.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) {
-      // Vérifier si un lien actif est dedans
-      var hasActive = el.querySelector('.active');
-      if (hasActive) {
-        el.classList.add('open');
-        var menuId = id.replace('menu-','');
-        var arrow = document.getElementById('arrow-'+menuId);
-        if(arrow) arrow.textContent='▼';
-      } else {
-        el.classList.add('open'); // Ouvert par défaut
-        var menuId = id.replace('menu-','');
-        var arrow = document.getElementById('arrow-'+menuId);
-        if(arrow) arrow.textContent='▼';
-      }
-    }
-  });
-});
 </script>
 </body>
 </html>

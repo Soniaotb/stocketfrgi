@@ -1,51 +1,107 @@
 {% extends 'base.html' %}
-{% block title %}Paramètres — StockETF{% endblock %}
+{% block title %}Paramètres — Gestion Stock ETF RGI{% endblock %}
 {% block page_title %}⚙️ Paramètres{% endblock %}
 {% block content %}
-<div class="kpi-grid">
-  <div class="kpi blue"><div class="kpi-val">{{ users|length }}</div><div class="kpi-label">👤 Utilisateurs</div></div>
+
+<!-- KPIs base de données -->
+<div class="kpi-grid" style="margin-bottom:20px">
+  <div class="kpi blue"><div class="kpi-val">{{ stats.nb_articles }}</div><div class="kpi-label">📦 Articles</div></div>
+  <div class="kpi blue"><div class="kpi-val">{{ stats.nb_containers }}</div><div class="kpi-label">🗃️ Containers</div></div>
+  <div class="kpi blue"><div class="kpi-val">{{ stats.nb_chantiers }}</div><div class="kpi-label">🏗️ Chantiers</div></div>
+  <div class="kpi green"><div class="kpi-val">{{ "%.0f"|format(stats.valeur_stock) }} €</div><div class="kpi-label">💶 Valeur stock</div></div>
+  <div class="kpi red"><div class="kpi-val">{{ stats.nb_ruptures }}</div><div class="kpi-label">🔴 Ruptures</div></div>
+  <div class="kpi amber"><div class="kpi-val">{{ stats.nb_critiques }}</div><div class="kpi-label">🟠 Critiques</div></div>
 </div>
 
-<div class="card" style="margin-bottom:18px">
-  <div class="card-title">👤 Gestion des utilisateurs</div>
-  <div class="table-wrap" style="margin-bottom:18px">
-  <table>
-    <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Créé le</th><th>Action</th></tr></thead>
-    <tbody>
-    {% for u in users %}
-    <tr>
-      <td><strong>{{ u['nom'] }}</strong></td>
-      <td>{{ u['email'] }}</td>
-      <td>
-        {% if u['role']=='admin' %}<span class="badge" style="background:#fef3c7;color:#92400e">👑 Admin</span>
-        {% elif u['role']=='responsable' %}<span class="badge badge-ok">Responsable</span>
-        {% elif u['role']=='magasinier' %}<span class="badge badge-cours">Magasinier</span>
-        {% elif u['role']=='chef_chantier' %}<span class="badge badge-attente">Chef chantier</span>
-        {% else %}<span class="badge">{{ u['role'] }}</span>{% endif %}
-      </td>
-      <td style="font-size:.75rem;color:#888">{{ u['created_at'][:10] if u['created_at'] else '—' }}</td>
-      <td>
-        {% if u['id'] != session.user_id %}
-        <form method="POST" action="{{ url_for('supprimer_utilisateur', id=u['id']) }}" onsubmit="return confirm('Désactiver cet utilisateur ?')">
-          <button type="submit" class="btn btn-danger btn-sm">🗑 Désactiver</button>
-        </form>
-        {% else %}
-        <span style="font-size:.72rem;color:#aaa">Vous-même</span>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+<!-- Tabs navigation -->
+<div style="display:flex;gap:4px;margin-bottom:18px;border-bottom:2px solid #e8e8e8;padding-bottom:0">
+  <button class="tab-btn active" onclick="showTab('tab-users')" id="btn-users">👤 Utilisateurs</button>
+  <button class="tab-btn" onclick="showTab('tab-compte')" id="btn-compte">🔑 Mon compte</button>
+  <button class="tab-btn" onclick="showTab('tab-stats')" id="btn-stats">📊 Statistiques</button>
+  <button class="tab-btn" onclick="showTab('tab-exports')" id="btn-exports">📥 Exports</button>
+  {% if session.user_role == 'admin' %}
+  <button class="tab-btn" onclick="showTab('tab-system')" id="btn-system">🛠️ Système</button>
+  {% endif %}
+</div>
+
+<style>
+.tab-btn{padding:8px 16px;border:none;background:transparent;color:#666;font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;transition:.15s}
+.tab-btn:hover{background:#f5f5f5;color:#333}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange);background:#fff8f0}
+.tab-content{display:none}.tab-content.active{display:block}
+.section-card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:16px}
+.section-title{font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;display:flex;align-items:center;gap:8px}
+.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:.83rem}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:#666}
+.stat-val{font-weight:700;color:var(--navy)}
+</style>
+
+<!-- TAB UTILISATEURS -->
+<div id="tab-users" class="tab-content active">
+  <div class="section-card">
+    <div class="section-title">👤 Utilisateurs actifs ({{ users|length }})</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Créé le</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+      <tr>
+        <td><strong>{{ u['nom'] }}</strong></td>
+        <td style="font-size:.8rem">{{ u['email'] }}</td>
+        <td>
+          {% if u['role']=='admin' %}<span class="role-badge" style="background:#fef3c7;color:#92400e">👑 Admin</span>
+          {% elif u['role']=='responsable' %}<span class="role-badge" style="background:#dcfce7;color:#166534">Responsable</span>
+          {% elif u['role']=='magasinier' %}<span class="role-badge" style="background:#dbeafe;color:#1e40af">Magasinier</span>
+          {% elif u['role']=='chef_chantier' %}<span class="role-badge" style="background:#fef3c7;color:#92400e">Chef chantier</span>
+          {% else %}<span class="role-badge" style="background:#f3f4f6;color:#374151">{{ u['role'] }}</span>{% endif %}
+        </td>
+        <td style="font-size:.75rem;color:#888">{{ u['created_at'][:10] if u['created_at'] else '—' }}</td>
+        <td style="white-space:nowrap">
+          {% if session.user_role == 'admin' %}
+          <button onclick="document.getElementById('edit-user-{{ u.id }}').style.display='block'" class="btn btn-outline btn-sm">✏️</button>
+          {% if u['id'] != session.user_id %}
+          <form method="POST" action="{{ url_for('supprimer_utilisateur', id=u['id']) }}" style="display:inline" onsubmit="return confirm('Désactiver {{ u.nom }} ?')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+          </form>
+          {% else %}
+          <span style="font-size:.7rem;color:#aaa">Vous</span>
+          {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      <!-- Formulaire édition inline -->
+      <tr id="edit-user-{{ u.id }}" style="display:none;background:#fff8f0">
+        <td colspan="5">
+          <form method="POST" action="{{ url_for('modifier_utilisateur', id=u['id']) }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:8px 0">
+            <div class="form-group"><label>Nom</label><input type="text" name="nom" value="{{ u['nom'] }}" style="min-width:140px"></div>
+            <div class="form-group"><label>Rôle</label>
+              <select name="role">
+                {% for r in ['magasinier','chef_chantier','responsable','admin'] %}
+                <option value="{{ r }}" {% if r==u['role'] %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group"><label>Nouveau mot de passe</label><input type="password" name="nouveau_password" placeholder="Laisser vide = inchangé" style="min-width:180px"></div>
+            <button type="submit" class="btn btn-primary btn-sm">💾 Sauvegarder</button>
+            <button type="button" onclick="document.getElementById('edit-user-{{ u.id }}').style.display='none'" class="btn btn-outline btn-sm">Annuler</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
   </div>
 
   {% if session.user_role == 'admin' %}
-  <div style="border-top:1px solid #e8e8e8;padding-top:16px">
-    <div class="card-title">➕ Ajouter un utilisateur</div>
+  <div class="section-card">
+    <div class="section-title">➕ Créer un utilisateur</div>
     <form method="POST" action="{{ url_for('ajouter_utilisateur') }}">
       <div class="form-grid">
-        <div class="form-group"><label>Nom *</label><input type="text" name="nom" required placeholder="Prénom Nom"></div>
-        <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="prenom@stocketf.com"></div>
+        <div class="form-group"><label>Nom complet *</label><input type="text" name="nom" required placeholder="Prénom Nom"></div>
+        <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="prenom@etf-rgi.fr"></div>
         <div class="form-group"><label>Mot de passe *</label><input type="password" name="password" required placeholder="••••••••" minlength="6"></div>
         <div class="form-group"><label>Rôle</label>
           <select name="role">
@@ -62,19 +118,173 @@
   {% endif %}
 </div>
 
-<div class="card">
-  <div class="card-title">ℹ️ Informations système</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.83rem">
-    <div><strong>Version :</strong> StockETF v3.0</div>
-    <div><strong>Date :</strong> Mai 2026</div>
-    <div><strong>Connexion actuelle :</strong> {{ session.user_nom }}</div>
-    <div><strong>Rôle :</strong> {{ session.user_role }}</div>
-    <div style="grid-column:1/-1">
-      <strong>Comptes démo :</strong>
-      <code style="font-size:.75rem;background:#f0f2f5;padding:4px 8px;border-radius:5px;margin-left:6px">
-        admin@stocketf.com / admin2026 · stock@stocketf.com / stock2026 · responsable@stocketf.com / resp2026
-      </code>
+<!-- TAB MON COMPTE -->
+<div id="tab-compte" class="tab-content">
+  <div class="section-card">
+    <div class="section-title">👤 Informations du compte</div>
+    <div style="font-size:.85rem;line-height:2.2;color:#555">
+      <div><strong>Nom :</strong> {{ session.user_nom }}</div>
+      <div><strong>Rôle :</strong>
+        {% if session.user_role=='admin' %}<span class="role-badge" style="background:#fef3c7;color:#92400e">👑 Administrateur</span>
+        {% elif session.user_role=='responsable' %}<span class="role-badge" style="background:#dcfce7;color:#166534">Responsable</span>
+        {% elif session.user_role=='magasinier' %}<span class="role-badge" style="background:#dbeafe;color:#1e40af">Magasinier</span>
+        {% else %}<span class="role-badge">{{ session.user_role }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-title">🔑 Changer mon mot de passe</div>
+    <form method="POST" action="{{ url_for('changer_mot_de_passe') }}">
+      <div class="form-grid">
+        <div class="form-group"><label>Mot de passe actuel *</label><input type="password" name="ancien_password" required placeholder="Votre mot de passe actuel"></div>
+        <div class="form-group"><label>Nouveau mot de passe *</label><input type="password" name="nouveau_password" required placeholder="Minimum 6 caractères" minlength="6"></div>
+        <div class="form-group"><label>Confirmer le nouveau *</label><input type="password" name="confirm_password" required placeholder="Répétez le nouveau mot de passe"></div>
+      </div>
+      <div style="margin-top:12px"><button type="submit" class="btn btn-primary">🔑 Changer le mot de passe</button></div>
+    </form>
+  </div>
+
+  <div class="section-card">
+    <div class="section-title">📋 Permissions du rôle</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;font-size:.82rem">
+      {% set perms = {
+        'admin': ['Voir stock','Ajouter article','Modifier article','Supprimer article','Valider sortie','Valider réception','Export Excel','Voir rapports','Gérer utilisateurs','Réinitialiser données'],
+        'responsable': ['Voir stock','Ajouter article','Modifier article','Valider sortie','Valider réception','Export Excel','Voir rapports'],
+        'magasinier': ['Voir stock','Ajouter article','Modifier article','Valider sortie','Valider réception'],
+        'chef_chantier': ['Voir stock','Créer bon de sortie']
+      } %}
+      {% for perm in perms.get(session.user_role, []) %}
+      <div style="background:#f0fdf4;border-radius:6px;padding:6px 10px;color:#166534">✅ {{ perm }}</div>
+      {% endfor %}
     </div>
   </div>
 </div>
+
+<!-- TAB STATISTIQUES -->
+<div id="tab-stats" class="tab-content">
+  <div class="grid-2">
+    <div class="section-card">
+      <div class="section-title">📦 Base de données</div>
+      <div class="stat-row"><span class="stat-label">Articles actifs</span><span class="stat-val">{{ stats.nb_articles }}</span></div>
+      <div class="stat-row"><span class="stat-label">Containers</span><span class="stat-val">{{ stats.nb_containers }}</span></div>
+      <div class="stat-row"><span class="stat-label">Chantiers</span><span class="stat-val">{{ stats.nb_chantiers }}</span></div>
+      <div class="stat-row"><span class="stat-label">Familles</span><span class="stat-val">{{ stats.nb_familles }}</span></div>
+      <div class="stat-row"><span class="stat-label">Fournisseurs</span><span class="stat-val">{{ stats.nb_fournisseurs }}</span></div>
+      <div class="stat-row"><span class="stat-label">Utilisateurs actifs</span><span class="stat-val">{{ users|length }}</span></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">📋 Activité</div>
+      <div class="stat-row"><span class="stat-label">Bons de sortie</span><span class="stat-val">{{ stats.nb_bons_sortie }}</span></div>
+      <div class="stat-row"><span class="stat-label">Bons de réception</span><span class="stat-val">{{ stats.nb_bons_reception }}</span></div>
+      <div class="stat-row"><span class="stat-label">Commandes</span><span class="stat-val">{{ stats.nb_commandes }}</span></div>
+      <div class="stat-row"><span class="stat-label">Mouvements enregistrés</span><span class="stat-val">{{ stats.nb_mouvements }}</span></div>
+      <div class="stat-row"><span class="stat-label">Articles en rupture</span><span class="stat-val" style="color:#dc2626">{{ stats.nb_ruptures }}</span></div>
+      <div class="stat-row"><span class="stat-label">Articles critiques</span><span class="stat-val" style="color:#d97706">{{ stats.nb_critiques }}</span></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-title">💶 Valeur du stock</div>
+    <div style="font-size:2.5rem;font-weight:800;color:var(--orange);text-align:center;padding:20px">
+      {{ "%.2f"|format(stats.valeur_stock) }} €
+    </div>
+    <p style="text-align:center;font-size:.8rem;color:#888">Basé sur les prix d'achat renseignés</p>
+  </div>
+</div>
+
+<!-- TAB EXPORTS -->
+<div id="tab-exports" class="tab-content">
+  <div class="section-card">
+    <div class="section-title">📊 Exports CSV — Catalogue & Stock</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      <a href="{{ url_for('export_stock') }}" class="btn btn-outline" style="justify-content:center;padding:14px">
+        📊 Export stock complet
+      </a>
+      <a href="{{ url_for('export_bons_sortie') }}" class="btn btn-outline" style="justify-content:center;padding:14px">
+        📤 Export bons de sortie
+      </a>
+      <a href="{{ url_for('export_bons_reception') }}" class="btn btn-outline" style="justify-content:center;padding:14px">
+        📥 Export bons de réception
+      </a>
+      {% for ct in nav_containers %}
+      <a href="{{ url_for('export_container', id=ct.id) }}" class="btn btn-outline" style="justify-content:center;padding:14px">
+        📦 Export {{ ct.nom }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-title">🖨️ Impressions — Fiches containers</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      {% for ct in nav_containers %}
+      <a href="{{ url_for('imprimer_container', id=ct.id) }}" target="_blank" class="btn btn-outline" style="justify-content:center;padding:14px">
+        🖨️ Fiche {{ ct.nom }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- TAB SYSTÈME (admin only) -->
+{% if session.user_role == 'admin' %}
+<div id="tab-system" class="tab-content">
+  <div class="section-card">
+    <div class="section-title">ℹ️ Informations système</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.83rem">
+      <div class="stat-row"><span class="stat-label">Application</span><span class="stat-val">Gestion Stock ETF RGI</span></div>
+      <div class="stat-row"><span class="stat-label">Version</span><span class="stat-val">v3.0 — Mai 2026</span></div>
+      <div class="stat-row"><span class="stat-label">Base de données</span><span class="stat-val">SQLite</span></div>
+      <div class="stat-row"><span class="stat-label">Serveur</span><span class="stat-val">Render.com</span></div>
+      <div class="stat-row"><span class="stat-label">Connecté en tant que</span><span class="stat-val">{{ session.user_nom }}</span></div>
+    </div>
+  </div>
+
+  <div class="section-card" style="border-left:4px solid #d97706">
+    <div class="section-title">⚠️ Réinitialisation de l'historique</div>
+    <p style="font-size:.83rem;color:#555;margin-bottom:14px;line-height:1.6">
+      Cette action supprime <strong>tous les bons de sortie, réception, commandes, transferts et mouvements</strong>.
+      Les articles et leurs stocks ne sont <strong>pas</strong> modifiés.
+    </p>
+    <form method="POST" action="{{ url_for('reset_stock') }}" onsubmit="return confirm('⚠️ ATTENTION : Supprimer tout l\'historique ? Cette action est irréversible !')">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group">
+          <label>Tapez <strong>CONFIRMER</strong> pour valider</label>
+          <input type="text" name="confirm_reset" placeholder="CONFIRMER" style="min-width:180px">
+        </div>
+        <button type="submit" class="btn btn-danger" style="padding:9px 16px">🗑️ Réinitialiser l'historique</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="section-card" style="border-left:4px solid #dc2626">
+    <div class="section-title">🔴 Zone dangereuse</div>
+    <div style="font-size:.82rem;color:#666;line-height:1.8">
+      <p>Pour réinitialiser <strong>complètement</strong> la base de données (articles inclus), supprimez le fichier <code>stocketf.db</code> sur le serveur et redémarrez l'application.</p>
+      <p style="margin-top:8px;color:#E8661A;font-weight:600">⚠️ Cette opération est irréversible — sauvegardez d'abord via les exports CSV.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+  var btnId = 'btn-' + id.replace('tab-','');
+  var btn = document.getElementById(btnId);
+  if (btn) btn.classList.add('active');
+}
+
+// Ouvrir le bon onglet si hash dans l'URL
+if (window.location.hash) {
+  var tab = window.location.hash.replace('#','');
+  if (document.getElementById('tab-'+tab)) showTab('tab-'+tab);
+}
+</script>
 {% endblock %}

@@ -31,6 +31,44 @@ def get_next_numero(table, col, prefix):
     else: n = 1
     return f"{prefix}{n:03d}"
 
+@app.context_processor
+def inject_globals():
+    """Injecte les données dynamiques dans tous les templates automatiquement."""
+    if 'user_id' not in session:
+        return {}
+    try:
+        conn = get_db()
+        nav_containers = conn.execute(
+            "SELECT id, nom, code, statut FROM containers WHERE actif=1 ORDER BY nom"
+        ).fetchall()
+        nav_chantiers = conn.execute(
+            "SELECT id, nom, code FROM chantiers WHERE actif=1 ORDER BY nom"
+        ).fetchall()
+        nav_familles = conn.execute(
+            "SELECT id, nom, icone FROM familles WHERE actif=1 ORDER BY nom"
+        ).fetchall()
+        # Stats rapides pour le menu
+        nb_ruptures = conn.execute(
+            "SELECT COUNT(*) FROM articles WHERE actif=1 AND stock=0"
+        ).fetchone()[0]
+        nb_alertes = conn.execute(
+            "SELECT COUNT(*) FROM articles WHERE actif=1 AND stock>0 AND stock<=stock_alerte"
+        ).fetchone()[0]
+        nb_cmds_att = conn.execute(
+            "SELECT COUNT(*) FROM commandes WHERE statut='EN ATTENTE'"
+        ).fetchone()[0]
+        conn.close()
+        return dict(
+            nav_containers=nav_containers,
+            nav_chantiers=nav_chantiers,
+            nav_familles=nav_familles,
+            nav_ruptures=nb_ruptures,
+            nav_alertes=nb_alertes,
+            nav_cmds_att=nb_cmds_att,
+        )
+    except:
+        return {}
+
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -1456,9 +1494,23 @@ def parametres():
         flash('Accès réservé','error')
         return redirect(url_for('dashboard'))
     conn = get_db()
-    users = conn.execute("SELECT * FROM utilisateurs WHERE actif=1").fetchall()
+    users = conn.execute("SELECT * FROM utilisateurs WHERE actif=1 ORDER BY role,nom").fetchall()
+    stats = {
+        'nb_articles': conn.execute("SELECT COUNT(*) FROM articles WHERE actif=1").fetchone()[0],
+        'nb_containers': conn.execute("SELECT COUNT(*) FROM containers WHERE actif=1").fetchone()[0],
+        'nb_chantiers': conn.execute("SELECT COUNT(*) FROM chantiers WHERE actif=1").fetchone()[0],
+        'nb_familles': conn.execute("SELECT COUNT(*) FROM familles WHERE actif=1").fetchone()[0],
+        'nb_fournisseurs': conn.execute("SELECT COUNT(*) FROM fournisseurs WHERE actif=1").fetchone()[0],
+        'nb_bons_sortie': conn.execute("SELECT COUNT(*) FROM bons_sortie").fetchone()[0],
+        'nb_bons_reception': conn.execute("SELECT COUNT(*) FROM bons_reception").fetchone()[0],
+        'nb_commandes': conn.execute("SELECT COUNT(*) FROM commandes").fetchone()[0],
+        'nb_mouvements': conn.execute("SELECT COUNT(*) FROM mouvements").fetchone()[0],
+        'valeur_stock': conn.execute("SELECT SUM(stock*prix_achat) FROM articles WHERE actif=1").fetchone()[0] or 0,
+        'nb_ruptures': conn.execute("SELECT COUNT(*) FROM articles WHERE actif=1 AND stock=0").fetchone()[0],
+        'nb_critiques': conn.execute("SELECT COUNT(*) FROM articles WHERE actif=1 AND stock>0 AND stock<=stock_min").fetchone()[0],
+    }
     conn.close()
-    return render_template('parametres.html', users=users)
+    return render_template('parametres.html', users=users, stats=stats)
 
 @app.route('/parametres/utilisateurs/ajouter', methods=['POST'])
 @login_required
@@ -1672,5 +1724,84 @@ def export_bons_reception():
     return Response('\ufeff'+output.getvalue(), mimetype='text/csv',
         headers={'Content-Disposition':f'attachment;filename=bons_reception_{date.today().isoformat()}.csv'})
 
+
+@app.route('/parametres/changer-mot-de-passe', methods=['POST'])
+@login_required
+def changer_mot_de_passe():
+    ancien = request.form.get('ancien_password','')
+    nouveau = request.form.get('nouveau_password','')
+    confirm = request.form.get('confirm_password','')
+    conn = get_db()
+    user = conn.execute("SELECT * FROM utilisateurs WHERE id=?",(session['user_id'],)).fetchone()
+    if user['password_hash'] != hash_pw(ancien):
+        flash('Ancien mot de passe incorrect','error')
+    elif nouveau != confirm:
+        flash('Les mots de passe ne correspondent pas','error')
+    elif len(nouveau) < 6:
+        flash('Mot de passe trop court (6 caractères minimum)','error')
+    else:
+        conn.execute("UPDATE utilisateurs SET password_hash=? WHERE id=?",(hash_pw(nouveau),session['user_id']))
+        conn.commit()
+        flash('Mot de passe modifié avec succès','success')
+    conn.close()
+    return redirect(url_for('parametres'))
+
+@app.route('/parametres/modifier-utilisateur/<int:id>', methods=['POST'])
+@login_required
+def modifier_utilisateur(id):
+    if session.get('user_role') != 'admin':
+        flash('Accès refusé','error'); return redirect(url_for('parametres'))
+    conn = get_db()
+    conn.execute("UPDATE utilisateurs SET nom=?,role=? WHERE id=?",(
+        request.form.get('nom',''), request.form.get('role','magasinier'), id,
+    ))
+    if request.form.get('nouveau_password'):
+        conn.execute("UPDATE utilisateurs SET password_hash=? WHERE id=?",(
+            hash_pw(request.form.get('nouveau_password','')), id,
+        ))
+    conn.commit(); conn.close()
+    flash('Utilisateur modifié','success')
+    return redirect(url_for('parametres'))
+
+@app.route('/parametres/reset-stock', methods=['POST'])
+@login_required
+def reset_stock():
+    if session.get('user_role') != 'admin':
+        flash('Accès refusé — Admin uniquement','error'); return redirect(url_for('parametres'))
+    confirm = request.form.get('confirm_reset','')
+    if confirm != 'CONFIRMER':
+        flash('Tapez CONFIRMER pour valider la réinitialisation','error'); return redirect(url_for('parametres'))
+    conn = get_db()
+    conn.execute("DELETE FROM bons_sortie_lignes")
+    conn.execute("DELETE FROM bons_sortie")
+    conn.execute("DELETE FROM bons_reception")
+    conn.execute("DELETE FROM commande_lignes")
+    conn.execute("DELETE FROM commandes")
+    conn.execute("DELETE FROM transferts")
+    conn.execute("DELETE FROM inventaires")
+    conn.execute("DELETE FROM mouvements")
+    conn.commit(); conn.close()
+    flash('Historique réinitialisé — articles conservés','success')
+    return redirect(url_for('parametres'))
+
+@app.route('/parametres/info')
+@login_required
+def parametres_info():
+    conn = get_db()
+    info = {
+        'nb_articles': conn.execute("SELECT COUNT(*) FROM articles WHERE actif=1").fetchone()[0],
+        'nb_containers': conn.execute("SELECT COUNT(*) FROM containers WHERE actif=1").fetchone()[0],
+        'nb_chantiers': conn.execute("SELECT COUNT(*) FROM chantiers WHERE actif=1").fetchone()[0],
+        'nb_familles': conn.execute("SELECT COUNT(*) FROM familles WHERE actif=1").fetchone()[0],
+        'nb_fournisseurs': conn.execute("SELECT COUNT(*) FROM fournisseurs WHERE actif=1").fetchone()[0],
+        'nb_bons_sortie': conn.execute("SELECT COUNT(*) FROM bons_sortie").fetchone()[0],
+        'nb_bons_reception': conn.execute("SELECT COUNT(*) FROM bons_reception").fetchone()[0],
+        'nb_commandes': conn.execute("SELECT COUNT(*) FROM commandes").fetchone()[0],
+        'nb_mouvements': conn.execute("SELECT COUNT(*) FROM mouvements").fetchone()[0],
+        'valeur_stock': conn.execute("SELECT SUM(stock*prix_achat) FROM articles WHERE actif=1").fetchone()[0] or 0,
+    }
+    conn.close()
+    from flask import jsonify
+    return jsonify(info)
 if __name__ == '__main__':
     app.run(debug=False)
