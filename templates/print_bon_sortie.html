@@ -36,7 +36,12 @@ tbody td{padding:7px 10px;border-bottom:1px solid #eee;font-size:.8rem}
 </head>
 <body>
 <div class="no-print">
-  <button class="btn-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimer {% if avec_prix %}avec prix{% else %}sans prix{% endif %}</button>
+  {% if avec_prix %}
+  <a href="{{ request.path.replace('/imprimer','') }}/imprimer-sans-prix" class="btn-back" style="background:#f0f9ff;color:#1e40af;border:1px solid #bae6fd">📄 Version sans prix</a>
+  {% else %}
+  <a href="{{ request.path.replace('/imprimer-sans-prix','') }}/imprimer" class="btn-back" style="background:#fff8f0;color:#c85510;border:1px solid #fed7aa">💰 Version avec prix</a>
+  {% endif %}
   <a href="javascript:history.back()" class="btn-back">← Retour</a>
 </div>
 
@@ -78,8 +83,10 @@ tbody td{padding:7px 10px;border-bottom:1px solid #eee;font-size:.8rem}
       <th>#</th><th>Réf.</th><th>Désignation</th><th>Référence fab.</th><th>Marque</th>
       <th>Container</th><th>Unité</th>
       <th style="text-align:right">Qté</th>
+      {% if avec_prix %}
       <th style="text-align:right">Prix u. €</th>
       <th style="text-align:right">Montant €</th>
+      {% endif %}
     </tr>
   </thead>
   <tbody>
@@ -98,15 +105,19 @@ tbody td{padding:7px 10px;border-bottom:1px solid #eee;font-size:.8rem}
     <td style="font-size:.75rem">{{ l['container_nom'] or '—' }}</td>
     <td>{{ l['unite'] or '—' }}</td>
     <td style="text-align:right"><strong>{{ l['quantite'] }}</strong></td>
+    {% if avec_prix %}
     <td style="text-align:right">{{ "%.2f"|format(l['prix_achat'] or 0) }}</td>
     <td style="text-align:right"><strong>{{ "%.2f"|format(montant) }}</strong></td>
+    {% endif %}
   </tr>
   {% endfor %}
   <tr class="total-row">
-    <td colspan="7" style="text-align:right;font-size:.82rem">TOTAL BON DE SORTIE</td>
+    <td colspan="{% if avec_prix %}7{% else %}5{% endif %}" style="text-align:right;font-size:.82rem">TOTAL BON DE SORTIE</td>
     <td style="text-align:right">{{ total_qte.v }}</td>
+    {% if avec_prix %}
     <td></td>
     <td style="text-align:right;color:#E8661A;font-size:.95rem">{{ "%.2f"|format(total_mt.v) }} €</td>
+    {% endif %}
   </tr>
   </tbody>
 </table>

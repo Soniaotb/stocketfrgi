@@ -34,7 +34,8 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       <span class="badge badge-ok">✅ Validé</span>
-      <a href="{{ url_for('imprimer_bon_sortie', id=row.bon['id']) }}" target="_blank" class="btn btn-outline btn-sm">🖨️ Imprimer</a>
+      <a href="{{ url_for('imprimer_bon_sortie', id=row.bon['id']) }}" target="_blank" class="btn btn-outline btn-sm" title="Avec prix">🖨️ Avec prix</a>
+      <a href="{{ url_for('imprimer_bon_sortie_sans_prix', id=row.bon['id']) }}" target="_blank" class="btn btn-outline btn-sm" title="Sans prix" style="color:#1e40af">🖨️ Sans prix</a>
       <form method="POST" action="{{ url_for('supprimer_bon_sortie', id=row.bon['id']) }}" style="display:inline"
         onsubmit="return confirm('Supprimer ce bon ? Les stocks seront restaurés.')">
         <button type="submit" class="btn btn-danger btn-sm">🗑 Supprimer</button>

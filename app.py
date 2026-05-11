@@ -1549,6 +1549,14 @@ def supprimer_utilisateur(id):
 @app.route('/bons-sortie/<int:id>/imprimer')
 @login_required
 def imprimer_bon_sortie(id):
+    return _imprimer_bon_sortie(id, avec_prix=True)
+
+@app.route('/bons-sortie/<int:id>/imprimer-sans-prix')
+@login_required
+def imprimer_bon_sortie_sans_prix(id):
+    return _imprimer_bon_sortie(id, avec_prix=False)
+
+def _imprimer_bon_sortie(id, avec_prix=True):
     conn = get_db()
     bon = conn.execute("""SELECT bs.*, ch.nom as chantier_nom, ch.code as chantier_code,
         ch.adresse as chantier_adresse, u.nom as created_by_nom
@@ -1562,7 +1570,7 @@ def imprimer_bon_sortie(id):
         FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
         LEFT JOIN containers c ON a.container_id=c.id WHERE bsl.bon_id=?""",(id,)).fetchall()
     conn.close()
-    return render_template('print_bon_sortie.html', bon=bon, lignes=lignes)
+    return render_template('print_bon_sortie.html', bon=bon, lignes=lignes, avec_prix=avec_prix)
 
 @app.route('/bons-sortie/<int:id>/supprimer', methods=['POST'])
 @login_required
@@ -1803,5 +1811,37 @@ def parametres_info():
     conn.close()
     from flask import jsonify
     return jsonify(info)
+
+@app.route('/api/recherche-articles')
+@login_required
+def api_recherche_articles():
+    q = request.args.get('q','').strip()
+    if len(q) < 2:
+        return jsonify([])
+    conn = get_db()
+    articles = conn.execute("""
+        SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.actif=1 AND (
+            a.designation LIKE ? OR a.id LIKE ? OR 
+            a.reference LIKE ? OR a.marque LIKE ? OR a.famille LIKE ?
+        ) ORDER BY a.designation LIMIT 15
+    """, [f'%{q}%']*5).fetchall()
+    conn.close()
+    result = []
+    for a in articles:
+        if a['stock'] == 0: etat = 'RUPTURE'
+        elif a['stock'] <= a['stock_min']: etat = 'CRITIQUE'
+        elif a['stock'] <= a['stock_alerte']: etat = 'ALERTE'
+        else: etat = 'OK'
+        result.append({
+            'id': a['id'], 'designation': a['designation'],
+            'famille': a['famille'], 'stock': a['stock'],
+            'unite': a['unite'], 'container': a['ct_nom'] or '',
+            'etat': etat
+        })
+    return jsonify(result)
+
+
 if __name__ == '__main__':
     app.run(debug=False)
