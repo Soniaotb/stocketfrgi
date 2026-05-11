@@ -106,19 +106,19 @@
   </div>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>N°</th><th>Article</th><th>Fournisseur</th><th>Qté</th><th>Statut</th></tr></thead>
+    <thead><tr><th>N°</th><th>Fournisseur</th><th>1er article</th><th>Lignes</th><th>Statut</th></tr></thead>
     <tbody>
-    {% for c in cmds %}
+    {% for row in cmds %}
     <tr>
-      <td><strong>{{ c['numero'] }}</strong></td>
-      <td>{{ (c['designation'] or c['article_id'])[:30] }}</td>
-      <td>{{ c['fournisseur'] or '—' }}</td>
-      <td>{{ c['quantite'] }}</td>
+      <td><strong>{{ row.cmd['numero'] }}</strong></td>
+      <td>{{ row.cmd['fournisseur'] or '—' }}</td>
+      <td>{% if row.lignes %}{{ (row.lignes[0]['designation'] or row.lignes[0]['article_id'])[:28] }}{% else %}—{% endif %}</td>
+      <td><span style="background:#f0f2f5;padding:1px 7px;border-radius:10px;font-size:.72rem;font-weight:600">{{ row.nb_lignes }} art.</span></td>
       <td>
-        {% if c['statut']=='EN ATTENTE' %}<span class="badge badge-attente">En attente</span>
-        {% elif c['statut']=='EN COURS' %}<span class="badge badge-cours">En cours</span>
-        {% elif c['statut']=='VALIDEE' %}<span class="badge badge-validee">Validée</span>
-        {% else %}<span class="badge">{{ c['statut'] }}</span>{% endif %}
+        {% if row.cmd['statut']=='EN ATTENTE' %}<span class="badge badge-attente">En attente</span>
+        {% elif row.cmd['statut']=='EN COURS' %}<span class="badge badge-cours">En cours</span>
+        {% elif row.cmd['statut']=='VALIDEE' %}<span class="badge badge-validee">Validée</span>
+        {% else %}<span class="badge">{{ row.cmd['statut'] }}</span>{% endif %}
       </td>
     </tr>
     {% endfor %}

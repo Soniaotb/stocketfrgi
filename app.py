@@ -464,9 +464,13 @@ def dashboard():
     bons_s = conn.execute("""SELECT bs.*, a.designation, ch.nom as chantier_nom
         FROM bons_sortie bs LEFT JOIN articles a ON bs.article_id=a.id
         LEFT JOIN chantiers ch ON bs.chantier_id=ch.id ORDER BY bs.id DESC LIMIT 8""").fetchall()
-    cmds = conn.execute("""SELECT c.*, a.designation FROM commandes c
-        LEFT JOIN articles a ON c.article_id=a.id
-        WHERE c.statut IN ('EN ATTENTE','EN COURS','VALIDEE') ORDER BY c.id DESC LIMIT 6""").fetchall()
+    cmds_raw = conn.execute("""SELECT * FROM commandes
+        WHERE statut IN ('EN ATTENTE','EN COURS','VALIDEE') ORDER BY id DESC LIMIT 6""").fetchall()
+    cmds = []
+    for c in cmds_raw:
+        lignes = conn.execute("""SELECT cl.*, a.designation FROM commande_lignes cl
+            LEFT JOIN articles a ON cl.article_id=a.id WHERE cl.commande_id=? LIMIT 1""",(c['id'],)).fetchall()
+        cmds.append({'cmd':c,'lignes':lignes,'nb_lignes':len(lignes)})
     containers = conn.execute("SELECT * FROM containers WHERE actif=1").fetchall()
     container_stats = []
     for ct in containers:
@@ -479,7 +483,7 @@ def dashboard():
         total=total, ruptures=ruptures, critiques=critiques, alertes=alertes,
         valeur=valeur, urgents=urgents[:8], bons_s=bons_s, cmds=cmds,
         container_stats=container_stats, get_etat=get_etat_stock,
-        nb_cmds_attente=len([c for c in cmds if c['statut']=='EN ATTENTE']))
+        nb_cmds_attente=len([c for c in cmds_raw if c['statut']=='EN ATTENTE']))
 
 # ─── CONTAINERS ───────────────────────────────────────────────────────────────
 
