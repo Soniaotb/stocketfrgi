@@ -3,19 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}StockETF CN{% endblock %}</title>
+<title>{% block title %}Gestion Stock ETF RGI{% endblock %}</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet"/>
+<style>
+/* Select2 custom theme */
+.select2-container--default .select2-selection--single{
+  height:36px;border:1px solid #e8e8e8;border-radius:7px;padding:4px 8px;font-size:.83rem;
+  display:flex;align-items:center;background:#fff;transition:.15s}
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default.select2-container--focus .select2-selection--single{
+  border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,102,26,.1);outline:none}
+.select2-container--default .select2-selection--single .select2-selection__rendered{
+  color:var(--text);font-size:.83rem;line-height:1.4;padding:0}
+.select2-container--default .select2-selection--single .select2-selection__arrow{
+  height:34px;right:6px}
+.select2-dropdown{border:1px solid #e0e0e0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden}
+.select2-container--default .select2-search--dropdown .select2-search__field{
+  border:1px solid #e0e0e0;border-radius:6px;padding:6px 10px;font-size:.82rem;margin:6px}
+.select2-container--default .select2-results__option{padding:7px 12px;font-size:.82rem}
+.select2-container--default .select2-results__option--highlighted{background:var(--orange);color:#fff}
+.select2-container--default .select2-results__option[aria-selected=true]{background:#fff8f0;color:var(--orange)}
+.select2-container{width:100%!important}
+</style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--orange:#E8661A;--orange-dk:#c85510;--navy:#1a1a2e;--navy2:#16213e;--navy3:#0f3460;
 --white:#fff;--gray:#f5f5f5;--gray2:#e8e8e8;--text:#2d2d2d;--text2:#666;
 --ok:#16a34a;--alerte:#d97706;--critique:#dc2626;--rupture:#7c3aed;}
 body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;display:flex}
-.sidebar{width:220px;min-height:100vh;background:var(--navy);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:scroll;overflow-x:hidden;direction:rtl;scrollbar-width:thin;scrollbar-color:rgba(232,102,26,.6) rgba(255,255,255,.05)}
-.sidebar::-webkit-scrollbar{width:5px}
-.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,.05)}
-.sidebar::-webkit-scrollbar-thumb{background:rgba(232,102,26,.6);border-radius:10px}
-.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(232,102,26,.9)}
-.sidebar-brand,.sidebar-nav,.sidebar-footer{direction:ltr}
+.sidebar{width:220px;height:100vh;background:var(--navy);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(232,102,26,.7) rgba(255,255,255,.08)}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:10px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(232,102,26,.7);border-radius:10px}
+.sidebar::-webkit-scrollbar-thumb:hover{background:#E8661A}
 .sidebar-brand{padding:16px;border-bottom:1px solid rgba(255,255,255,.1)}
 .sidebar-brand h1{font-size:1.1rem;font-weight:800;color:var(--orange)}
 .sidebar-brand p{font-size:.65rem;color:rgba(255,255,255,.4);margin-top:2px}
@@ -246,7 +266,29 @@ tbody td{padding:8px 11px;vertical-align:middle}
     {% block content %}{% endblock %}
   </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 <script>
+// ─── SELECT2 — Toutes les listes déroulantes ────────────────────────────────
+$(document).ready(function() {
+  // Appliquer Select2 à tous les <select> avec au moins 5 options
+  $('select').each(function() {
+    var $el = $(this);
+    var optCount = $el.find('option').length;
+    if (optCount >= 5) {
+      $el.select2({
+        placeholder: $el.find('option[value=""]').text() || '-- Rechercher --',
+        allowClear: true,
+        language: {
+          noResults: function() { return 'Aucun résultat'; },
+          searching: function() { return 'Recherche…'; }
+        },
+        width: '100%'
+      });
+    }
+  });
+});
+
 // ─── AUTOCOMPLETE RECHERCHE GLOBALE ───────────────────────────────────────
 (function() {
   var input = document.getElementById('global-search');

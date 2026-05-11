@@ -103,6 +103,7 @@ function ajouterLigne(){
     '<td class="montant-cell" style="font-weight:700;color:#E8661A;white-space:nowrap">0,00 €</td>'+
     '<td><button type="button" onclick="supprimerLigne(\'ligne-'+ligneCount+'\')" class="btn btn-danger btn-sm">✕</button></td>';
   document.getElementById('lignes-body').appendChild(tr);
+  initSelect2(tr);
   updateResume();
 }
 
@@ -150,6 +151,20 @@ function recalc(el){
   updateResume();
 }
 
+function initSelect2(container) {
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    $(container).find('select').each(function() {
+      if ($(this).find('option').length >= 5) {
+        $(this).select2({
+          placeholder: '-- Choisir un article --',
+          allowClear: true,
+          language: {noResults: function(){return 'Aucun résultat';}, searching: function(){return 'Recherche…';}},
+          width: '100%'
+        });
+      }
+    });
+  }
+}
 function updateResume(){
   var rows=document.querySelectorAll('.ligne-row');
   var total=0;

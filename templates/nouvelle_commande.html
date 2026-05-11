@@ -101,6 +101,7 @@ function ajouterLigne() {
     '<td class="stock-cell" style="font-size:.78rem;color:#888;white-space:nowrap">—</td>' +
     '<td><button type="button" onclick="supprimerLigne(\'ligne-' + ligneCount + '\')" class="btn btn-danger btn-sm">✕</button></td>';
   document.getElementById('lignes-body').appendChild(tr);
+  initSelect2(tr);
   updateResume();
 }
 
