@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Nouvel Inventaire — StockETF{% endblock %}
+{% block page_title %}📊 Saisie inventaire{% endblock %}
+{% block content %}
+<div class="page-header"><h2>Contrôler un article</h2><a href="{{ url_for('inventaire') }}" class="btn btn-outline">← Retour</a></div>
+<div class="grid-2">
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Date *</label><input type="date" name="date_inventaire" value="{{ today }}" required></div>
+    <div class="form-group"><label>Filtrer par container</label>
+      <select id="ct_filter" onchange="filterArticles()">
+        <option value="">Tous les containers</option>
+        {% for c in containers %}<option value="{{ c['id'] }}">{{ c['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="grid-column:1/-1"><label>Article *</label>
+      <select name="article_id" id="art" required onchange="updateInfo()">
+        <option value="">-- Choisir un article --</option>
+        {% for a in articles %}
+        <option value="{{ a['id'] }}" data-stock="{{ a['stock'] }}" data-unite="{{ a['unite'] }}" data-ct="{{ a['container_id'] }}" data-ct-nom="{{ a['ct_nom'] }}">
+          {{ a['id'] }} — {{ a['designation'] }} | 📦 {{ a['ct_nom'] or '?' }} (stock théorique: {{ a['stock'] }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Stock réel compté *</label><input type="number" name="stock_reel" id="stock_reel" required min="0" value="0"></div>
+    <div class="form-group"><label>Appliquer la correction ?</label>
+      <select name="appliquer">
+        <option value="1">Oui — Mettre à jour le stock</option>
+        <option value="0">Non — Enregistrer seulement</option>
+      </select>
+    </div>
+    <div class="form-group" style="grid-column:1/-1"><label>Commentaire</label><textarea name="commentaire" placeholder="Ex: Comptage physique OK, 2 articles manquants…"></textarea></div>
+  </div>
+  <div id="info" style="display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px;margin:12px 0;font-size:.83rem">
+    📦 Container : <strong id="i-ct">—</strong> | Stock théorique : <strong id="i-stock">—</strong> | Écart : <strong id="i-ecart" style="font-size:1rem">—</strong>
+  </div>
+  <div style="margin-top:14px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">📊 Enregistrer</button>
+    <a href="{{ url_for('inventaire') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+<div class="card" style="align-self:start">
+  <div class="card-title">ℹ️ Comment faire</div>
+  <ol style="font-size:.82rem;color:#555;line-height:2;padding-left:16px">
+    <li>Sélectionnez le container</li>
+    <li>Choisissez l'article</li>
+    <li>Comptez physiquement les articles</li>
+    <li>Saisissez le stock réel</li>
+    <li>Choisissez si vous corrigez le stock</li>
+    <li>Validez</li>
+  </ol>
+</div>
+</div>
+<script>
+function filterArticles() {
+  var ctId = document.getElementById('ct_filter').value;
+  var sel = document.getElementById('art');
+  for (var i=0; i<sel.options.length; i++) {
+    var opt = sel.options[i];
+    if (!opt.value) continue;
+    if (!ctId || opt.getAttribute('data-ct') == ctId) {
+      opt.style.display='';
+    } else {
+      opt.style.display='none';
+    }
+  }
+  sel.value='';
+  document.getElementById('info').style.display='none';
+}
+function updateInfo() {
+  var sel = document.getElementById('art');
+  var opt = sel.options[sel.selectedIndex];
+  if (!sel.value) { document.getElementById('info').style.display='none'; return; }
+  var stock = parseInt(opt.getAttribute('data-stock'));
+  document.getElementById('i-ct').textContent = opt.getAttribute('data-ct-nom') || '?';
+  document.getElementById('i-stock').textContent = stock + ' ' + opt.getAttribute('data-unite');
+  document.getElementById('info').style.display='block';
+  document.getElementById('stock_reel').oninput = function() {
+    var reel = parseInt(this.value) || 0;
+    var ecart = reel - stock;
+    var el = document.getElementById('i-ecart');
+    el.textContent = (ecart >= 0 ? '+' : '') + ecart;
+    el.style.color = ecart === 0 ? '#16a34a' : ecart < 0 ? '#dc2626' : '#d97706';
+  };
+}
+</script>
+{% endblock %}

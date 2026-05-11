@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Fournisseurs — StockETF{% endblock %}
+{% block page_title %}🏭 Fournisseurs{% endblock %}
+{% block content %}
+<div class="page-header"><h2>{{ fournisseurs|length }} fournisseur(s)</h2></div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title">➕ Ajouter un fournisseur</div>
+  <form method="POST" action="{{ url_for('ajouter_fournisseur') }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Nom société *</label><input type="text" name="nom" required placeholder="Ex: Würth France"></div>
+      <div class="form-group"><label>Contact</label><input type="text" name="contact" placeholder="Nom du commercial"></div>
+      <div class="form-group"><label>Téléphone</label><input type="text" name="telephone" placeholder="01 XX XX XX XX"></div>
+      <div class="form-group"><label>Email</label><input type="email" name="email" placeholder="contact@fournisseur.fr"></div>
+      <div class="form-group"><label>Adresse</label><input type="text" name="adresse" placeholder="Ville / Région"></div>
+      <div class="form-group"><label>Délai livraison (jours)</label><input type="number" name="delai" value="7" min="1"></div>
+      <div class="form-group"><label>Conditions paiement</label><input type="text" name="conditions" value="30j net"></div>
+      <div class="form-group"><label>Articles fournis</label><input type="text" name="articles_fournis" placeholder="Ex: EPI, Visserie, Outillage"></div>
+      <div class="form-group"><label>Commentaires</label><input type="text" name="commentaires" placeholder="Notes…"></div>
+    </div>
+    <div style="margin-top:14px"><button type="submit" class="btn btn-primary">➕ Ajouter</button></div>
+  </form>
+</div>
+
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>ID</th><th>Nom</th><th>Contact</th><th>Téléphone</th><th>Email</th><th>Délai</th><th>Conditions</th><th>Articles</th><th>Action</th></tr></thead>
+  <tbody>
+  {% for f in fournisseurs %}
+  <tr>
+    <td><code style="font-size:.72rem;color:#E8661A">{{ f['id'] }}</code></td>
+    <td><strong>{{ f['nom'] }}</strong></td>
+    <td>{{ f['contact'] or '—' }}</td>
+    <td>{{ f['telephone'] or '—' }}</td>
+    <td style="font-size:.78rem">{{ f['email'] or '—' }}</td>
+    <td>{{ f['delai'] }}j</td>
+    <td style="font-size:.75rem">{{ f['conditions'] }}</td>
+    <td style="font-size:.72rem;color:#666;max-width:150px">{{ f['articles_fournis'] or '—' }}</td>
+    <td>
+      <form method="POST" action="{{ url_for('supprimer_fournisseur', id=f['id']) }}" onsubmit="return confirm('Archiver ce fournisseur ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" style="text-align:center;padding:30px;color:#888">Aucun fournisseur</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Analytics — StockETF{% endblock %}
+{% block page_title %}📈 Analytics & Reporting{% endblock %}
+{% block content %}
+<div class="kpi-grid">
+  <div class="kpi blue"><div class="kpi-val">{{ total }}</div><div class="kpi-label">📦 Total références</div></div>
+  <div class="kpi green"><div class="kpi-val">{{ "{:,.0f}".format(valeur_totale).replace(',', ' ') }} €</div><div class="kpi-label">💶 Valeur totale</div></div>
+  <div class="kpi red"><div class="kpi-val">{{ ruptures }}</div><div class="kpi-label">🔴 Ruptures</div></div>
+  <div class="kpi amber"><div class="kpi-val">{{ critiques }}</div><div class="kpi-label">🟠 Critiques</div></div>
+  <div class="kpi amber"><div class="kpi-val">{{ alertes }}</div><div class="kpi-label">🟡 Alertes</div></div>
+  <div class="kpi blue"><div class="kpi-val">{{ nb_sorties_mois }}</div><div class="kpi-label">📤 Sorties ce mois</div></div>
+</div>
+
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="card">
+    <div class="card-title">📊 Par famille</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Famille</th><th>Articles</th><th>Alertes</th><th>Ruptures</th><th>Valeur</th></tr></thead>
+      <tbody>
+      {% for famille, stats in familles_list %}
+      <tr>
+        <td><strong>{{ famille }}</strong></td>
+        <td>{{ stats.nb }}</td>
+        <td>{% if stats.alertes>0 %}<span style="color:#d97706;font-weight:600">{{ stats.alertes }}</span>{% else %}0{% endif %}</td>
+        <td>{% if stats.ruptures>0 %}<span style="color:#dc2626;font-weight:700">{{ stats.ruptures }}</span>{% else %}0{% endif %}</td>
+        <td><strong>{{ "%.0f"|format(stats.valeur) }} €</strong></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏗️ Coûts par chantier</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Chantier</th><th>Sorties</th><th>Coût matériel</th></tr></thead>
+      <tbody>
+      {% for cs in chantier_stats %}
+      <tr>
+        <td><strong>{{ cs['nom'] or 'Sans chantier' }}</strong></td>
+        <td>{{ cs['nb_sorties'] }}</td>
+        <td><strong>{{ "%.0f"|format(cs['cout'] or 0) }} €</strong></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" style="text-align:center;color:#888;padding:16px">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="card">
+    <div class="card-title">📤 Top 10 articles sortis</div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Article</th><th>Désignation</th><th>Qté totale</th></tr></thead>
+      <tbody>
+      {% for s in top_sorties %}
+      <tr>
+        <td><strong style="color:#E8661A">{{ loop.index }}</strong></td>
+        <td><code style="font-size:.72rem">{{ s['article_id'] }}</code></td>
+        <td>{{ (s['designation'] or s['article_id'])[:28] }}</td>
+        <td><strong>{{ s['total_sorti'] }}</strong></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚨 Articles urgents à commander</div>
+    {% if urgents %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Désignation</th><th>Stock</th><th>État</th><th>Fournisseur</th></tr></thead>
+      <tbody>
+      {% for a in urgents %}
+      {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
+      <tr>
+        <td><code style="font-size:.72rem">{{ a['id'] }}</code></td>
+        <td>{{ a['designation'][:25] }}</td>
+        <td><span class="stock-num {{ etat|lower }}">{{ a['stock'] }}</span></td>
+        <td>
+          {% if etat=='RUPTURE' %}<span class="badge badge-rupture">🔴</span>
+          {% elif etat=='CRITIQUE' %}<span class="badge badge-critique">🟠</span>
+          {% else %}<span class="badge badge-alerte">🟡</span>{% endif %}
+        </td>
+        <td style="font-size:.75rem">{{ a['fournisseur'] or '—' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#16a34a;text-align:center;padding:20px;font-weight:600">✅ Aucune urgence !</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

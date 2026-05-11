@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Inventaire — StockETF{% endblock %}
+{% block page_title %}📊 Inventaire{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>{{ inventaires|length }} saisie(s) d'inventaire</h2>
+  <a href="{{ url_for('nouvel_inventaire') }}" class="btn btn-primary">📊 Nouvel inventaire</a>
+</div>
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>N°</th><th>Date</th><th>Container</th><th>Article</th><th>Désignation</th><th>Stock théorique</th><th>Stock réel</th><th>Écart</th><th>Commentaire</th></tr></thead>
+  <tbody>
+  {% for i in inventaires %}
+  {% set ecart = i['stock_reel'] - i['stock_theorique'] %}
+  <tr>
+    <td><strong style="color:#6366f1">{{ i['numero'] }}</strong></td>
+    <td>{{ i['date_inventaire'] }}</td>
+    <td>{{ i['container_nom'] or '—' }}</td>
+    <td><code style="font-size:.72rem">{{ i['article_id'] }}</code></td>
+    <td>{{ i['designation'] or '—' }}</td>
+    <td>{{ i['stock_theorique'] }}</td>
+    <td><strong>{{ i['stock_reel'] }}</strong></td>
+    <td>
+      {% if ecart < 0 %}<span style="color:#dc2626;font-weight:700">{{ ecart }}</span>
+      {% elif ecart > 0 %}<span style="color:#16a34a;font-weight:700">+{{ ecart }}</span>
+      {% else %}<span style="color:#888">0</span>{% endif %}
+    </td>
+    <td style="font-size:.75rem;color:#666">{{ i['commentaire'] or '—' }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" style="text-align:center;padding:30px;color:#888">Aucun inventaire</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

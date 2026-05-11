@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Chantiers — StockETF{% endblock %}
+{% block page_title %}🏗️ Gestion des Chantiers{% endblock %}
+{% block content %}
+<div class="page-header"><h2>{{ chantiers|length }} chantier(s)</h2></div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title">➕ Ajouter un chantier</div>
+  <form method="POST" action="{{ url_for('ajouter_chantier') }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Nom *</label><input type="text" name="nom" required placeholder="Ex: Chantier D - Zone 3"></div>
+      <div class="form-group"><label>Code * (unique)</label><input type="text" name="code" required placeholder="Ex: CH-006"></div>
+      <div class="form-group"><label>Adresse / Lieu</label><input type="text" name="adresse" placeholder="Ex: Gare de Lyon"></div>
+      <div class="form-group"><label>Chef de chantier</label><input type="text" name="chef" placeholder="Nom Prénom"></div>
+      <div class="form-group"><label>Date début</label><input type="date" name="date_debut"></div>
+      <div class="form-group"><label>Date fin</label><input type="date" name="date_fin"></div>
+      <div class="form-group"><label>Budget matériel (€)</label><input type="number" name="budget" value="0" min="0" step="100"></div>
+      <div class="form-group"><label>Statut</label>
+        <select name="statut">
+          <option value="ACTIF">Actif</option>
+          <option value="SUSPENDU">Suspendu</option>
+          <option value="TERMINE">Terminé</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:14px"><button type="submit" class="btn btn-primary">➕ Ajouter</button></div>
+  </form>
+</div>
+
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Code</th><th>Nom</th><th>Lieu</th><th>Chef</th><th>Début</th><th>Fin</th><th>Statut</th><th>Sorties</th><th>Coût matériel</th><th>Budget</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for row in chantiers %}
+  <tr>
+    <td><strong style="color:#E8661A">{{ row.ch.code }}</strong></td>
+    <td><strong>{{ row.ch.nom }}</strong></td>
+    <td>{{ row.ch.adresse or '—' }}</td>
+    <td>{{ row.ch.chef or '—' }}</td>
+    <td style="font-size:.75rem">{{ row.ch.date_debut or '—' }}</td>
+    <td style="font-size:.75rem">{{ row.ch.date_fin or '—' }}</td>
+    <td>
+      {% if row.ch.statut=='ACTIF' %}<span class="badge badge-actif">Actif</span>
+      {% elif row.ch.statut=='SUSPENDU' %}<span class="badge badge-alerte">Suspendu</span>
+      {% else %}<span class="badge badge-inactif">Terminé</span>{% endif %}
+    </td>
+    <td>{{ row.nb_sorties }}</td>
+    <td><strong>{{ "%.0f"|format(row.cout) }} €</strong></td>
+    <td>{{ "%.0f"|format(row.ch.budget) }} €</td>
+    <td style="white-space:nowrap">
+      <button onclick="document.getElementById('mod-ch-{{ row.ch.id }}').style.display='block'" class="btn btn-outline btn-sm">✏️</button>
+      <form method="POST" action="{{ url_for('supprimer_chantier', id=row.ch.id) }}" style="display:inline" onsubmit="return confirm('Archiver ce chantier ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+      </form>
+    </td>
+  </tr>
+  <tr id="mod-ch-{{ row.ch.id }}" style="display:none;background:#fff8f0">
+    <td colspan="11">
+      <form method="POST" action="{{ url_for('modifier_chantier', id=row.ch.id) }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:8px 0">
+        <div class="form-group"><label>Nom</label><input type="text" name="nom" value="{{ row.ch.nom }}"></div>
+        <div class="form-group"><label>Adresse</label><input type="text" name="adresse" value="{{ row.ch.adresse }}"></div>
+        <div class="form-group"><label>Chef</label><input type="text" name="chef" value="{{ row.ch.chef }}"></div>
+        <div class="form-group"><label>Date début</label><input type="date" name="date_debut" value="{{ row.ch.date_debut }}"></div>
+        <div class="form-group"><label>Date fin</label><input type="date" name="date_fin" value="{{ row.ch.date_fin }}"></div>
+        <div class="form-group"><label>Budget</label><input type="number" name="budget" value="{{ row.ch.budget }}"></div>
+        <div class="form-group"><label>Statut</label>
+          <select name="statut">
+            {% for s in ['ACTIF','SUSPENDU','TERMINE'] %}
+            <option value="{{ s }}" {% if s==row.ch.statut %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">💾 Sauvegarder</button>
+        <button type="button" onclick="document.getElementById('mod-ch-{{ row.ch.id }}').style.display='none'" class="btn btn-outline btn-sm">Annuler</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="11" style="text-align:center;padding:30px;color:#888">Aucun chantier</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Nouveau Transfert — StockETF{% endblock %}
+{% block page_title %}🔀 Nouveau transfert entre containers{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>Déplacer un article d'un container à un autre</h2>
+  <a href="{{ url_for('transferts') }}" class="btn btn-outline">← Retour</a>
+</div>
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Date *</label><input type="date" name="date_transfert" value="{{ today }}" required></div>
+    <div class="form-group"><label>Article *</label>
+      <select name="article_id" id="art_sel" required onchange="updateContainers()">
+        <option value="">-- Choisir un article --</option>
+        {% for a in articles %}
+        <option value="{{ a['id'] }}" data-stock="{{ a['stock'] }}" data-unite="{{ a['unite'] }}" data-ct="{{ a['container_id'] }}">
+          {{ a['id'] }} — {{ a['designation'] }} | 📦 {{ a['ct_nom'] or 'Sans container' }} (stock: {{ a['stock'] }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Container source *</label>
+      <select name="container_source" id="ct_src" required>
+        <option value="">-- Choisir --</option>
+        {% for c in containers %}<option value="{{ c['id'] }}">{{ c['nom'] }} ({{ c['code'] }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Container destination *</label>
+      <select name="container_dest" required>
+        <option value="">-- Choisir --</option>
+        {% for c in containers %}<option value="{{ c['id'] }}">{{ c['nom'] }} ({{ c['code'] }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Quantité *</label><input type="number" name="quantite" required min="1" value="1" id="qte"></div>
+    <div class="form-group"><label>Commentaire</label><input type="text" name="commentaire" placeholder="Motif du transfert…"></div>
+  </div>
+  <div id="info" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;margin:14px 0;font-size:.83rem">
+    <strong>Stock disponible :</strong> <span id="info-stock">—</span>
+  </div>
+  <div style="margin-top:14px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">✅ Effectuer le transfert</button>
+    <a href="{{ url_for('transferts') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+<script>
+function updateContainers() {
+  var sel = document.getElementById('art_sel');
+  var opt = sel.options[sel.selectedIndex];
+  var info = document.getElementById('info');
+  if (!sel.value) { info.style.display='none'; return; }
+  var stock = opt.getAttribute('data-stock');
+  var unite = opt.getAttribute('data-unite');
+  var ctId = opt.getAttribute('data-ct');
+  document.getElementById('info-stock').textContent = stock + ' ' + unite;
+  document.getElementById('qte').max = stock;
+  info.style.display='block';
+  var src = document.getElementById('ct_src');
+  for (var i=0; i<src.options.length; i++) {
+    if (src.options[i].value == ctId) { src.selectedIndex=i; break; }
+  }
+}
+</script>
+{% endblock %}

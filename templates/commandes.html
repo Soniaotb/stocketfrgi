@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Commandes — StockETF{% endblock %}
+{% block page_title %}📋 Commandes fournisseurs{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>{{ cmds|length }} commande(s)</h2>
+  <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary">📋 Nouvelle commande</a>
+</div>
+<div class="card" style="margin-bottom:14px">
+  <div class="filters">
+    <a href="{{ url_for('commandes') }}" class="btn {% if not statut_sel %}btn-navy{% else %}btn-outline{% endif %} btn-sm">Toutes</a>
+    <a href="{{ url_for('commandes', statut='EN ATTENTE') }}" class="btn {% if statut_sel=='EN ATTENTE' %}btn-navy{% else %}btn-outline{% endif %} btn-sm">⏳ En attente</a>
+    <a href="{{ url_for('commandes', statut='VALIDEE') }}" class="btn {% if statut_sel=='VALIDEE' %}btn-navy{% else %}btn-outline{% endif %} btn-sm">✅ Validées</a>
+    <a href="{{ url_for('commandes', statut='EN COURS') }}" class="btn {% if statut_sel=='EN COURS' %}btn-navy{% else %}btn-outline{% endif %} btn-sm">🚚 En cours</a>
+    <a href="{{ url_for('commandes', statut='RECEPTIONNEE') }}" class="btn {% if statut_sel=='RECEPTIONNEE' %}btn-navy{% else %}btn-outline{% endif %} btn-sm">📦 Réceptionnées</a>
+  </div>
+</div>
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>N°</th><th>Date</th><th>Article</th><th>Désignation</th><th>Qté</th><th>Fournisseur</th><th>Prix u.</th><th>Montant</th><th>Statut</th><th>Livraison</th><th>Commentaire</th><th>Action</th></tr></thead>
+  <tbody>
+  {% for c in cmds %}
+  <tr>
+    <td><strong>{{ c['numero'] }}</strong></td>
+    <td>{{ c['date_demande'] }}</td>
+    <td><code style="font-size:.72rem">{{ c['article_id'] }}</code></td>
+    <td>{{ (c['designation'] or '—')[:28] }}</td>
+    <td><strong>{{ c['quantite'] }}</strong></td>
+    <td>{{ c['fournisseur'] or '—' }}</td>
+    <td>{{ "%.2f"|format(c['prix_unitaire']) }} €</td>
+    <td><strong>{{ "%.2f"|format(c['quantite']*c['prix_unitaire']) }} €</strong></td>
+    <td>
+      {% if c['statut']=='EN ATTENTE' %}<span class="badge badge-attente">⏳</span>
+      {% elif c['statut']=='VALIDEE' %}<span class="badge badge-validee">✅</span>
+      {% elif c['statut']=='EN COURS' %}<span class="badge badge-cours">🚚</span>
+      {% elif c['statut']=='RECEPTIONNEE' %}<span class="badge badge-receptionnee">📦</span>
+      {% else %}<span class="badge">{{ c['statut'] }}</span>{% endif %}
+    </td>
+    <td style="font-size:.75rem">{{ c['livraison_prevue'] or '—' }}</td>
+    <td style="font-size:.75rem;color:#666;max-width:100px">{{ c['commentaire'] or '—' }}</td>
+    <td style="white-space:nowrap">
+      <form method="POST" action="{{ url_for('maj_statut_commande', id=c['id']) }}" style="display:inline">
+        <select name="statut" onchange="this.form.submit()" style="font-size:.7rem;padding:2px 5px;border:1px solid #e0e0e0;border-radius:5px">
+          {% for s in ['EN ATTENTE','VALIDEE','EN COURS','RECEPTIONNEE','ANNULEE'] %}
+          <option value="{{ s }}" {% if s==c['statut'] %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </form>
+      <form method="POST" action="{{ url_for('supprimer_commande', id=c['id']) }}" style="display:inline" onsubmit="return confirm('Supprimer ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="12" style="text-align:center;padding:30px;color:#888">Aucune commande</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

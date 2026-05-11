@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Historique — StockETF{% endblock %}
+{% block page_title %}🔄 Historique des mouvements{% endblock %}
+{% block content %}
+<div class="page-header"><h2>200 derniers mouvements</h2></div>
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Date</th><th>Type</th><th>Article</th><th>Désignation</th><th>Qté</th><th>Stock avant</th><th>Stock après</th><th>Container</th><th>Chantier</th><th>Document</th></tr></thead>
+  <tbody>
+  {% for m in mouvements %}
+  <tr>
+    <td>{{ m['date_mouvement'] }}</td>
+    <td>
+      {% if m['type_mouvement']=='SORTIE' %}<span class="badge badge-critique">📤 Sortie</span>
+      {% elif m['type_mouvement']=='RECEPTION' %}<span class="badge badge-ok">📥 Récep.</span>
+      {% elif m['type_mouvement']=='TRANSFERT' %}<span class="badge badge-cours">🔀 Transfert</span>
+      {% elif m['type_mouvement']=='INVENTAIRE' %}<span class="badge" style="background:#ede9fe;color:#5b21b6">📊 Inventaire</span>
+      {% else %}<span class="badge">{{ m['type_mouvement'] }}</span>{% endif %}
+    </td>
+    <td><code style="font-size:.72rem">{{ m['article_id'] }}</code></td>
+    <td>{{ m['designation'] or '—' }}</td>
+    <td>
+      {% if m['type_mouvement']=='SORTIE' %}<span style="color:#dc2626;font-weight:700">-{{ m['quantite'] }}</span>
+      {% else %}<span style="color:#16a34a;font-weight:700">+{{ m['quantite'] }}</span>{% endif %}
+    </td>
+    <td>{{ m['stock_avant'] }}</td>
+    <td><strong>{{ m['stock_apres'] }}</strong></td>
+    <td style="font-size:.75rem">{{ m['container_nom'] or '—' }}</td>
+    <td style="font-size:.75rem">{{ m['chantier_nom'] or '—' }}</td>
+    <td><code style="font-size:.7rem;color:#E8661A">{{ m['reference_doc'] or '—' }}</code></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="10" style="text-align:center;padding:30px;color:#888">Aucun mouvement</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

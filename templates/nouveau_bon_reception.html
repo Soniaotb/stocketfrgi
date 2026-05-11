@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Nouveau Bon Reception — StockETF{% endblock %}
+{% block page_title %}📥 Nouveau bon de réception{% endblock %}
+{% block content %}
+<div class="page-header"><h2>Réceptionner une livraison</h2><a href="{{ url_for('bons_reception') }}" class="btn btn-outline">← Retour</a></div>
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Date *</label><input type="date" name="date_reception" value="{{ today }}" required></div>
+    <div class="form-group"><label>Fournisseur *</label>
+      <select name="fournisseur" required>
+        <option value="">-- Choisir --</option>
+        {% for f in fournisseurs %}<option value="{{ f['nom'] }}">{{ f['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>N° BL fournisseur</label><input type="text" name="num_bl" placeholder="Ex: BL-WURTH-042"></div>
+    <div class="form-group"><label>Article *</label>
+      <select name="article_id" id="art" required onchange="updateInfo()">
+        <option value="">-- Choisir --</option>
+        {% for a in articles %}
+        <option value="{{ a['id'] }}" data-stock="{{ a['stock'] }}" data-unite="{{ a['unite'] }}" data-ct="{{ a['ct_nom'] }}">
+          {{ a['id'] }} — {{ a['designation'] }} | 📦 {{ a['ct_nom'] or '?' }} (stock: {{ a['stock'] }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Qté commandée</label><input type="number" name="qte_commandee" min="0" value="0"></div>
+    <div class="form-group"><label>Qté reçue *</label><input type="number" name="qte_recue" required min="1" value="1"></div>
+    <div class="form-group"><label>Prix unitaire (€)</label><input type="number" name="prix_unitaire" min="0" step="0.01" value="0"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Commentaire / Contrôle</label><textarea name="commentaire" placeholder="Ex: Réception OK, 2 colis manquants…"></textarea></div>
+  </div>
+  <div id="info" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin:12px 0;font-size:.83rem">
+    📦 Container : <strong id="info-ct">—</strong> | Stock actuel : <strong id="info-stock" style="color:#1a1a2e">—</strong>
+  </div>
+  <div style="margin-top:14px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">✅ Valider la réception</button>
+    <a href="{{ url_for('bons_reception') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+<script>
+function updateInfo() {
+  var sel = document.getElementById('art');
+  var opt = sel.options[sel.selectedIndex];
+  if (!sel.value) { document.getElementById('info').style.display='none'; return; }
+  document.getElementById('info-ct').textContent = opt.getAttribute('data-ct') || '?';
+  document.getElementById('info-stock').textContent = opt.getAttribute('data-stock') + ' ' + opt.getAttribute('data-unite');
+  document.getElementById('info').style.display='block';
+}
+</script>
+{% endblock %}

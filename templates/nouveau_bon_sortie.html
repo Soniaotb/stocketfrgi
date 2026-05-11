@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Nouveau Bon Sortie — StockETF{% endblock %}
+{% block page_title %}📤 Nouveau bon de sortie{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>Distribuer du matériel</h2>
+  <a href="{{ url_for('bons_sortie') }}" class="btn btn-outline">← Retour</a>
+</div>
+<div class="grid-2">
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Date *</label><input type="date" name="date_sortie" value="{{ today }}" required></div>
+    <div class="form-group"><label>Demandeur *</label><input type="text" name="demandeur" required placeholder="Nom / Équipe"></div>
+    <div class="form-group"><label>Chantier</label>
+      <select name="chantier_id">
+        <option value="0">-- Aucun --</option>
+        {% for ch in chantiers %}<option value="{{ ch['id'] }}">{{ ch['code'] }} — {{ ch['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Article *</label>
+      <select name="article_id" id="art" required onchange="updateInfo()">
+        <option value="">-- Choisir --</option>
+        {% for a in articles %}
+        <option value="{{ a['id'] }}" data-stock="{{ a['stock'] }}" data-unite="{{ a['unite'] }}" data-ct="{{ a['ct_nom'] }}">
+          {{ a['id'] }} — {{ a['designation'] }} | 📦 {{ a['ct_nom'] or '?' }} (stock: {{ a['stock'] }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Quantité *</label><input type="number" name="quantite" id="qte" required min="1" value="1"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Commentaire</label><textarea name="commentaire" placeholder="Ex: Distribution EPI équipe A…"></textarea></div>
+  </div>
+  <div id="info" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;margin:12px 0;font-size:.83rem">
+    📦 Container : <strong id="info-ct">—</strong> | Stock dispo : <strong id="info-stock" style="color:#16a34a">—</strong>
+  </div>
+  <div style="margin-top:14px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">✅ Valider</button>
+    <a href="{{ url_for('bons_sortie') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+<div class="card" style="align-self:start">
+  <div class="card-title">ℹ️ Info</div>
+  <p style="font-size:.82rem;color:#666;line-height:1.6">Le bon de sortie <strong>déduit automatiquement</strong> la quantité du stock.</p>
+  <p style="font-size:.8rem;color:#E8661A;margin-top:10px;font-weight:600">⚠️ Ne pas modifier le stock directement dans le catalogue !</p>
+</div>
+</div>
+<script>
+function updateInfo() {
+  var sel = document.getElementById('art');
+  var opt = sel.options[sel.selectedIndex];
+  var info = document.getElementById('info');
+  if (!sel.value) { info.style.display='none'; return; }
+  document.getElementById('info-ct').textContent = opt.getAttribute('data-ct') || '?';
+  document.getElementById('info-stock').textContent = opt.getAttribute('data-stock') + ' ' + opt.getAttribute('data-unite');
+  document.getElementById('qte').max = opt.getAttribute('data-stock');
+  info.style.display='block';
+}
+</script>
+{% endblock %}

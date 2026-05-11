@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Containers — StockETF{% endblock %}
+{% block page_title %}📦 Gestion des Containers{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>{{ containers|length }} container(s)</h2>
+</div>
+
+<!-- Formulaire ajout -->
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title">➕ Ajouter un container</div>
+  <form method="POST" action="{{ url_for('ajouter_container') }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Nom *</label><input type="text" name="nom" required placeholder="Ex: Container BLEU"></div>
+      <div class="form-group"><label>Code * (unique)</label><input type="text" name="code" required placeholder="Ex: BLEU, C6, ROUGE"></div>
+      <div class="form-group"><label>Numéro</label><input type="text" name="numero" placeholder="Ex: C-006"></div>
+      <div class="form-group"><label>Emplacement</label><input type="text" name="emplacement" placeholder="Ex: Base arrière, Chantier A"></div>
+      <div class="form-group"><label>Statut</label>
+        <select name="statut">
+          <option value="ACTIF">Actif</option>
+          <option value="INACTIF">Inactif</option>
+          <option value="EN DEPLACEMENT">En déplacement</option>
+          <option value="MAINTENANCE">Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="Description…"></div>
+    </div>
+    <div style="margin-top:14px"><button type="submit" class="btn btn-primary">➕ Ajouter</button></div>
+  </form>
+</div>
+
+<!-- Liste containers -->
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Code</th><th>Nom</th><th>N°</th><th>Emplacement</th><th>Articles</th><th>Alertes</th><th>Ruptures</th><th>Valeur €</th><th>Statut</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for cs in containers %}
+  <tr>
+    <td><strong style="color:#E8661A;font-size:.9rem">{{ cs.ct.code }}</strong></td>
+    <td><a href="{{ url_for('container_stock', id=cs.ct.id) }}" style="color:#1a1a2e;font-weight:600;text-decoration:none">{{ cs.ct.nom }}</a></td>
+    <td style="color:#888;font-size:.75rem">{{ cs.ct.numero or '—' }}</td>
+    <td>{{ cs.ct.emplacement or '—' }}</td>
+    <td><strong>{{ cs.nb }}</strong></td>
+    <td>{% if cs.alertes>0 %}<span style="color:#d97706;font-weight:700">⚠️ {{ cs.alertes }}</span>{% else %}<span style="color:#888">0</span>{% endif %}</td>
+    <td>{% if cs.ruptures>0 %}<span style="color:#dc2626;font-weight:700">🔴 {{ cs.ruptures }}</span>{% else %}<span style="color:#888">0</span>{% endif %}</td>
+    <td><strong>{{ "%.0f"|format(cs.valeur) }} €</strong></td>
+    <td>
+      {% if cs.ct.statut=='ACTIF' %}<span class="badge badge-actif">Actif</span>
+      {% elif cs.ct.statut=='EN DEPLACEMENT' %}<span class="badge badge-deplacement">En dépl.</span>
+      {% elif cs.ct.statut=='MAINTENANCE' %}<span class="badge badge-maintenance">Maintenance</span>
+      {% else %}<span class="badge badge-inactif">Inactif</span>{% endif %}
+    </td>
+    <td style="white-space:nowrap">
+      <a href="{{ url_for('container_stock', id=cs.ct.id) }}" class="btn btn-outline btn-sm">👁 Voir</a>
+      <button onclick="document.getElementById('mod-{{ cs.ct.id }}').style.display='block'" class="btn btn-outline btn-sm">✏️</button>
+      <form method="POST" action="{{ url_for('supprimer_container', id=cs.ct.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce container ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+      </form>
+    </td>
+  </tr>
+  <!-- Modal modifier inline -->
+  <tr id="mod-{{ cs.ct.id }}" style="display:none;background:#fff8f0">
+    <td colspan="10">
+      <form method="POST" action="{{ url_for('modifier_container', id=cs.ct.id) }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:8px 0">
+        <div class="form-group"><label>Nom</label><input type="text" name="nom" value="{{ cs.ct.nom }}" style="min-width:160px"></div>
+        <div class="form-group"><label>Emplacement</label><input type="text" name="emplacement" value="{{ cs.ct.emplacement }}"></div>
+        <div class="form-group"><label>Description</label><input type="text" name="description" value="{{ cs.ct.description }}"></div>
+        <div class="form-group"><label>Statut</label>
+          <select name="statut">
+            {% for s in ['ACTIF','INACTIF','EN DEPLACEMENT','MAINTENANCE'] %}
+            <option value="{{ s }}" {% if s==cs.ct.statut %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">💾 Sauvegarder</button>
+        <button type="button" onclick="document.getElementById('mod-{{ cs.ct.id }}').style.display='none'" class="btn btn-outline btn-sm">Annuler</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="10" style="text-align:center;padding:30px;color:#888">Aucun container</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

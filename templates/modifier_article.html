@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Modifier {{ article['id'] }} — StockETF{% endblock %}
+{% block page_title %}✏️ Modifier {{ article['id'] }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>{{ article['designation'] }}</h2>
+  <a href="{{ url_for('catalogue') }}" class="btn btn-outline">← Retour</a>
+</div>
+<div class="card" style="margin-bottom:12px;background:#fff8f0;border-left:4px solid #E8661A">
+  <p style="font-size:.82rem;color:#8a4500">⚠️ Pour modifier le stock, utilisez les <strong>Bons de Sortie</strong> ou <strong>Bons de Réception</strong>.</p>
+  <p style="font-size:.82rem;color:#888;margin-top:4px">Stock actuel : <strong style="color:#1a1a2e;font-size:1rem">{{ article['stock'] }} {{ article['unite'] }}</strong></p>
+</div>
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Famille *</label>
+      <select name="famille" required>
+        {% for f in familles %}<option value="{{ f['nom'] }}" {% if f['nom']==article['famille'] %}selected{% endif %}>{{ f['icone'] }} {{ f['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Désignation *</label><input type="text" name="designation" value="{{ article['designation'] }}" required></div>
+    <div class="form-group"><label>Référence</label><input type="text" name="reference" value="{{ article['reference'] }}"></div>
+    <div class="form-group"><label>Marque</label><input type="text" name="marque" value="{{ article['marque'] }}"></div>
+    <div class="form-group"><label>Container *</label>
+      <select name="container_id" required>
+        {% for c in containers %}<option value="{{ c['id'] }}" {% if c['id']==article['container_id'] %}selected{% endif %}>{{ c['nom'] }} ({{ c['code'] }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Emplacement</label><input type="text" name="emplacement" value="{{ article['emplacement'] }}"></div>
+    <div class="form-group"><label>Unité</label>
+      <select name="unite">
+        {% for u in ['UNITE','PAQUET','BOITE','PAIRE','LOT','ROULEAU','BIDON','KIT'] %}
+        <option value="{{ u }}" {% if u==article['unite'] %}selected{% endif %}>{{ u }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Colisage</label><input type="number" name="colisage" value="{{ article['colisage'] }}" min="1"></div>
+    <div class="form-group"><label>Prix achat (€)</label><input type="number" name="prix_achat" value="{{ article['prix_achat'] }}" min="0" step="0.01"></div>
+    <div class="form-group"><label>Fournisseur</label>
+      <select name="fournisseur">
+        <option value="">-- Aucun --</option>
+        {% for f in fournisseurs %}<option value="{{ f['nom'] }}" {% if f['nom']==article['fournisseur'] %}selected{% endif %}>{{ f['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Stock min</label><input type="number" name="stock_min" value="{{ article['stock_min'] }}" min="0"></div>
+    <div class="form-group"><label>Stock alerte</label><input type="number" name="stock_alerte" value="{{ article['stock_alerte'] }}" min="0"></div>
+    <div class="form-group"><label>Stock max</label><input type="number" name="stock_max" value="{{ article['stock_max'] }}" min="0"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Observations</label><textarea name="observations">{{ article['observations'] }}</textarea></div>
+  </div>
+  <div style="margin-top:16px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+    <a href="{{ url_for('catalogue') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+{% endblock %}

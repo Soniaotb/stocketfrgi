@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Ajouter Article — StockETF{% endblock %}
+{% block page_title %}➕ Nouvel article{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>Ajouter au catalogue</h2>
+  <a href="{{ url_for('catalogue') }}" class="btn btn-outline">← Retour</a>
+</div>
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Famille *</label>
+      <select name="famille" required>
+        <option value="">-- Choisir --</option>
+        {% for f in familles %}<option value="{{ f['nom'] }}">{{ f['icone'] }} {{ f['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Désignation *</label><input type="text" name="designation" required placeholder="Ex: Gants anticoupure T10"></div>
+    <div class="form-group"><label>Référence fabricant</label><input type="text" name="reference" placeholder="Ex: WE23-5313G"></div>
+    <div class="form-group"><label>Marque</label><input type="text" name="marque" placeholder="Ex: Honeywell"></div>
+    <div class="form-group"><label>Container *</label>
+      <select name="container_id" required>
+        {% for c in containers %}<option value="{{ c['id'] }}">{{ c['nom'] }} ({{ c['code'] }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Emplacement (étagère)</label><input type="text" name="emplacement" placeholder="Ex: A1, B2…"></div>
+    <div class="form-group"><label>Unité</label>
+      <select name="unite">
+        {% for u in ['UNITE','PAQUET','BOITE','PAIRE','LOT','ROULEAU','BIDON','KIT'] %}
+        <option value="{{ u }}">{{ u }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Colisage</label><input type="number" name="colisage" value="1" min="1"></div>
+    <div class="form-group"><label>Prix achat (€)</label><input type="number" name="prix_achat" value="0" min="0" step="0.01"></div>
+    <div class="form-group"><label>Fournisseur</label>
+      <select name="fournisseur">
+        <option value="">-- Aucun --</option>
+        {% for f in fournisseurs %}<option value="{{ f['nom'] }}">{{ f['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Stock initial</label><input type="number" name="stock" value="0" min="0"></div>
+    <div class="form-group"><label>Stock minimum (seuil critique)</label><input type="number" name="stock_min" value="0" min="0"></div>
+    <div class="form-group"><label>Stock alerte</label><input type="number" name="stock_alerte" value="0" min="0"></div>
+    <div class="form-group"><label>Stock maximum</label><input type="number" name="stock_max" value="0" min="0"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Observations</label><textarea name="observations" placeholder="Notes…"></textarea></div>
+  </div>
+  <div style="margin-top:16px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">✅ Créer</button>
+    <a href="{{ url_for('catalogue') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Bons de Sortie — StockETF{% endblock %}
+{% block page_title %}📤 Bons de Sortie{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>{{ bons|length }} bon(s)</h2>
+  <a href="{{ url_for('nouveau_bon_sortie') }}" class="btn btn-primary">📤 Nouveau bon</a>
+</div>
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>N°</th><th>Date</th><th>Demandeur</th><th>Chantier</th><th>Article</th><th>Désignation</th><th>Qté</th><th>Unité</th><th>Commentaire</th></tr></thead>
+  <tbody>
+  {% for b in bons %}
+  <tr>
+    <td><strong style="color:#E8661A">{{ b['numero'] }}</strong></td>
+    <td>{{ b['date_sortie'] }}</td>
+    <td>{{ b['demandeur'] }}</td>
+    <td>{{ b['chantier_nom'] or '—' }}</td>
+    <td><code style="font-size:.72rem">{{ b['article_id'] }}</code></td>
+    <td>{{ b['designation'] or '—' }}</td>
+    <td><strong>{{ b['quantite'] }}</strong></td>
+    <td style="font-size:.72rem;color:#888">{{ b['unite'] or '' }}</td>
+    <td style="font-size:.75rem;color:#666">{{ b['commentaire'] or '—' }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" style="text-align:center;padding:30px;color:#888">Aucun bon de sortie</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

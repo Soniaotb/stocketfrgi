@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — StockETF{% endblock %}
+{% block page_title %}🏠 Tableau de bord{% endblock %}
+{% block content %}
+<div class="kpi-grid">
+  <div class="kpi blue"><div class="kpi-val">{{ total }}</div><div class="kpi-label">📦 Articles</div></div>
+  <div class="kpi red"><div class="kpi-val">{{ ruptures }}</div><div class="kpi-label">🔴 Ruptures</div></div>
+  <div class="kpi amber"><div class="kpi-val">{{ critiques }}</div><div class="kpi-label">🟠 Critiques</div></div>
+  <div class="kpi amber"><div class="kpi-val">{{ alertes }}</div><div class="kpi-label">🟡 Alertes</div></div>
+  <div class="kpi green"><div class="kpi-val">{{ "{:,.0f}".format(valeur).replace(',', ' ') }} €</div><div class="kpi-label">💶 Valeur stock</div></div>
+  <div class="kpi purple"><div class="kpi-val">{{ nb_cmds_attente }}</div><div class="kpi-label">📋 Commandes</div></div>
+</div>
+
+<!-- Containers -->
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title" style="justify-content:space-between">
+    <span>📦 État des containers</span>
+    <a href="{{ url_for('containers') }}" class="btn btn-outline btn-sm">Gérer</a>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+  {% for cs in container_stats %}
+  <a href="{{ url_for('container_stock', id=cs.container.id) }}" style="text-decoration:none">
+  <div style="border:1px solid #e8e8e8;border-radius:8px;padding:12px;transition:.15s;cursor:pointer" onmouseover="this.style.borderColor='#E8661A'" onmouseout="this.style.borderColor='#e8e8e8'">
+    <div style="font-weight:700;color:#1a1a2e;font-size:.88rem">{{ cs.container.nom }}</div>
+    <div style="font-size:.7rem;color:#888;margin-top:2px">{{ cs.container.code }}</div>
+    <div style="margin-top:8px;font-size:.78rem">
+      <span style="color:#555">{{ cs.nb }} articles</span> —
+      <strong>{{ "%.0f"|format(cs.valeur) }} €</strong>
+    </div>
+    {% if cs.alertes > 0 %}
+    <div style="margin-top:4px"><span class="badge badge-critique">⚠️ {{ cs.alertes }} alerte(s)</span></div>
+    {% else %}
+    <div style="margin-top:4px"><span class="badge badge-ok">✅ OK</span></div>
+    {% endif %}
+    <div style="margin-top:6px">
+      {% if cs.container.statut == 'ACTIF' %}<span class="badge badge-actif">Actif</span>
+      {% elif cs.container.statut == 'EN DEPLACEMENT' %}<span class="badge badge-deplacement">En dépl.</span>
+      {% else %}<span class="badge badge-inactif">{{ cs.container.statut }}</span>{% endif %}
+    </div>
+  </div>
+  </a>
+  {% endfor %}
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:18px">
+  <!-- Urgences -->
+  <div class="card">
+    <div class="card-title">🚨 Articles urgents</div>
+    {% if urgents %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Désignation</th><th>Stock</th><th>État</th></tr></thead>
+      <tbody>
+      {% for a in urgents %}
+      {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
+      <tr>
+        <td><code style="font-size:.72rem">{{ a['id'] }}</code></td>
+        <td>{{ a['designation'][:30] }}{% if a['designation']|length>30 %}…{% endif %}</td>
+        <td><span class="stock-num {{ etat|lower }}">{{ a['stock'] }}</span></td>
+        <td>
+          {% if etat=='RUPTURE' %}<span class="badge badge-rupture">🔴</span>
+          {% elif etat=='CRITIQUE' %}<span class="badge badge-critique">🟠</span>
+          {% else %}<span class="badge badge-alerte">🟡</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#16a34a;text-align:center;padding:20px;font-weight:600">✅ Aucune urgence</p>
+    {% endif %}
+  </div>
+
+  <!-- Derniers bons sortie -->
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between">
+      <span>📤 Dernières sorties</span>
+      <a href="{{ url_for('nouveau_bon_sortie') }}" class="btn btn-primary btn-sm">+ Nouveau</a>
+    </div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>N°</th><th>Date</th><th>Demandeur</th><th>Article</th><th>Qté</th></tr></thead>
+      <tbody>
+      {% for b in bons_s %}
+      <tr>
+        <td><strong style="color:#E8661A">{{ b['numero'] }}</strong></td>
+        <td>{{ b['date_sortie'] }}</td>
+        <td>{{ b['demandeur'] }}</td>
+        <td>{{ (b['designation'] or b['article_id'])[:25] }}</td>
+        <td><strong>{{ b['quantite'] }}</strong></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- Commandes en cours -->
+<div class="card">
+  <div class="card-title" style="justify-content:space-between">
+    <span>📋 Commandes en cours</span>
+    <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary btn-sm">+ Nouvelle</a>
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>N°</th><th>Article</th><th>Fournisseur</th><th>Qté</th><th>Statut</th></tr></thead>
+    <tbody>
+    {% for c in cmds %}
+    <tr>
+      <td><strong>{{ c['numero'] }}</strong></td>
+      <td>{{ (c['designation'] or c['article_id'])[:30] }}</td>
+      <td>{{ c['fournisseur'] or '—' }}</td>
+      <td>{{ c['quantite'] }}</td>
+      <td>
+        {% if c['statut']=='EN ATTENTE' %}<span class="badge badge-attente">En attente</span>
+        {% elif c['statut']=='EN COURS' %}<span class="badge badge-cours">En cours</span>
+        {% elif c['statut']=='VALIDEE' %}<span class="badge badge-validee">Validée</span>
+        {% else %}<span class="badge">{{ c['statut'] }}</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

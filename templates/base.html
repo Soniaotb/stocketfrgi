@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}StockETF CN{% endblock %}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--orange:#E8661A;--orange-dk:#c85510;--navy:#1a1a2e;--navy2:#16213e;--navy3:#0f3460;
+--white:#fff;--gray:#f5f5f5;--gray2:#e8e8e8;--text:#2d2d2d;--text2:#666;
+--ok:#16a34a;--alerte:#d97706;--critique:#dc2626;--rupture:#7c3aed;}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;min-height:100vh;background:var(--navy);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto}
+.sidebar-brand{padding:16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-brand h1{font-size:1.1rem;font-weight:800;color:var(--orange)}
+.sidebar-brand p{font-size:.65rem;color:rgba(255,255,255,.4);margin-top:2px}
+.sidebar-nav{flex:1;padding:8px 0}
+.nav-section{padding:10px 14px 3px;font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.3);font-weight:700}
+.nav-link{display:flex;align-items:center;gap:8px;padding:8px 14px;color:rgba(255,255,255,.72);text-decoration:none;font-size:.82rem;transition:.15s;border-left:3px solid transparent}
+.nav-link:hover{background:rgba(255,255,255,.07);color:#fff;border-left-color:var(--orange)}
+.nav-link.active{background:rgba(232,102,26,.15);color:var(--orange);border-left-color:var(--orange);font-weight:600}
+.nav-link .ico{font-size:.95rem;width:18px;text-align:center}
+.sidebar-footer{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:.68rem;color:rgba(255,255,255,.3)}
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gray2);position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.topbar-title{font-size:1rem;font-weight:800;color:var(--navy)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.user-badge{background:var(--orange);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem}
+.user-info{font-size:.75rem;color:var(--text2)}
+.btn-logout{font-size:.72rem;color:var(--text2);text-decoration:none;padding:4px 10px;border:1px solid var(--gray2);border-radius:6px}
+.btn-logout:hover{background:var(--gray)}
+.content{padding:20px;flex:1}
+.alert{padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:.83rem;font-weight:500}
+.alert-success{background:#dcfce7;color:#166534;border-left:4px solid #16a34a}
+.alert-error{background:#fee2e2;color:#991b1b;border-left:4px solid #dc2626}
+.card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.card-title{font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07);border-top:4px solid var(--orange)}
+.kpi.red{border-top-color:var(--critique)}.kpi.amber{border-top-color:var(--alerte)}
+.kpi.purple{border-top-color:var(--rupture)}.kpi.green{border-top-color:var(--ok)}
+.kpi.blue{border-top-color:var(--navy3)}
+.kpi-val{font-size:1.8rem;font-weight:800;color:var(--navy);line-height:1}
+.kpi-label{font-size:.72rem;color:var(--text2);margin-top:5px}
+.table-wrap{overflow-x:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{background:var(--navy);color:#fff;padding:9px 11px;text-align:left;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--gray2)}
+tbody tr:hover{background:#fafafa}
+tbody td{padding:8px 11px;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;white-space:nowrap}
+.badge-ok{background:#dcfce7;color:#166534}.badge-alerte{background:#fef3c7;color:#92400e}
+.badge-critique{background:#fee2e2;color:#991b1b}.badge-rupture{background:#ede9fe;color:#5b21b6}
+.badge-attente{background:#fef3c7;color:#92400e}.badge-cours{background:#dbeafe;color:#1e40af}
+.badge-validee{background:#d1fae5;color:#065f46}.badge-receptionnee{background:#e0e7ff;color:#3730a3}
+.badge-actif{background:#dcfce7;color:#166534}.badge-inactif{background:#f3f4f6;color:#6b7280}
+.badge-deplacement{background:#fef3c7;color:#92400e}.badge-maintenance{background:#fee2e2;color:#991b1b}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.8rem;font-weight:600;text-decoration:none;transition:.15s}
+.btn-primary{background:var(--orange);color:#fff}.btn-primary:hover{background:var(--orange-dk)}
+.btn-navy{background:var(--navy);color:#fff}.btn-navy:hover{background:var(--navy2)}
+.btn-sm{padding:4px 9px;font-size:.72rem}
+.btn-danger{background:#fee2e2;color:#dc2626}.btn-danger:hover{background:#fecaca}
+.btn-outline{background:#fff;color:var(--navy);border:1px solid var(--gray2)}.btn-outline:hover{background:var(--gray)}
+.btn-success{background:#dcfce7;color:#166534}.btn-success:hover{background:#bbf7d0}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.form-group{display:flex;flex-direction:column;gap:3px}
+.form-group label{font-size:.75rem;font-weight:600;color:var(--text)}
+.form-group input,.form-group select,.form-group textarea{padding:7px 11px;border:1px solid var(--gray2);border-radius:7px;font-size:.83rem;color:var(--text);background:#fff;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,102,26,.1)}
+.form-group textarea{resize:vertical;min-height:70px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.filters input,.filters select{padding:6px 11px;border:1px solid var(--gray2);border-radius:7px;font-size:.8rem;background:#fff}
+.filters input:focus,.filters select:focus{outline:none;border-color:var(--orange)}
+.stock-num{font-weight:700;font-size:.9rem}
+.stock-num.ok{color:var(--ok)}.stock-num.alerte{color:var(--alerte)}
+.stock-num.critique{color:var(--critique)}.stock-num.rupture{color:var(--rupture)}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.page-header h2{font-size:1rem;font-weight:800;color:var(--navy)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}.sidebar{width:180px}.main{margin-left:180px}}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>📦 StockETF</h1>
+    <p>Chantier Ferroviaire CN</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Principal</div>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}"><span class="ico">🏠</span>Tableau de bord</a>
+    <a href="{{ url_for('catalogue') }}" class="nav-link {% if 'article' in request.endpoint or request.endpoint=='catalogue' %}active{% endif %}"><span class="ico">🗄️</span>Catalogue (147)</a>
+
+    <div class="nav-section">Containers</div>
+    <a href="{{ url_for('containers') }}" class="nav-link {% if 'container' in request.endpoint %}active{% endif %}"><span class="ico">📦</span>Containers</a>
+    <a href="{{ url_for('transferts') }}" class="nav-link {% if 'transfert' in request.endpoint %}active{% endif %}"><span class="ico">🔀</span>Transferts</a>
+
+    <div class="nav-section">Mouvements</div>
+    <a href="{{ url_for('bons_sortie') }}" class="nav-link {% if 'sortie' in request.endpoint %}active{% endif %}"><span class="ico">📤</span>Bons de Sortie</a>
+    <a href="{{ url_for('bons_reception') }}" class="nav-link {% if 'reception' in request.endpoint %}active{% endif %}"><span class="ico">📥</span>Bons de Réception</a>
+    <a href="{{ url_for('commandes') }}" class="nav-link {% if 'commande' in request.endpoint %}active{% endif %}"><span class="ico">📋</span>Commandes</a>
+    <a href="{{ url_for('inventaire') }}" class="nav-link {% if 'inventaire' in request.endpoint %}active{% endif %}"><span class="ico">📊</span>Inventaire</a>
+    <a href="{{ url_for('mouvements') }}" class="nav-link {% if request.endpoint=='mouvements' %}active{% endif %}"><span class="ico">🔄</span>Historique</a>
+
+    <div class="nav-section">Gestion</div>
+    <a href="{{ url_for('chantiers') }}" class="nav-link {% if 'chantier' in request.endpoint %}active{% endif %}"><span class="ico">🏗️</span>Chantiers</a>
+    <a href="{{ url_for('fournisseurs') }}" class="nav-link {% if 'fournisseur' in request.endpoint %}active{% endif %}"><span class="ico">🏭</span>Fournisseurs</a>
+    <a href="{{ url_for('familles') }}" class="nav-link {% if 'famille' in request.endpoint %}active{% endif %}"><span class="ico">🏷️</span>Familles</a>
+
+    <div class="nav-section">Analyse</div>
+    <a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint=='analytics' %}active{% endif %}"><span class="ico">📈</span>Analytics</a>
+
+    {% if session.user_role in ['admin','responsable'] %}
+    <div class="nav-section">Admin</div>
+    <a href="{{ url_for('parametres') }}" class="nav-link {% if request.endpoint=='parametres' %}active{% endif %}"><span class="ico">⚙️</span>Paramètres</a>
+    {% endif %}
+  </div>
+  <div class="sidebar-footer">v3.0 — Mai 2026</div>
+</nav>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+    <div class="topbar-right">
+      <div>
+        <div style="font-size:.8rem;font-weight:600;color:var(--navy)">{{ session.user_nom }}</div>
+        <div class="user-info">{{ session.user_role }}</div>
+      </div>
+      <div class="user-badge">{{ session.user_nom[0]|upper if session.user_nom else 'U' }}</div>
+      <a href="{{ url_for('logout') }}" class="btn-logout">Déconnexion</a>
+    </div>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Catalogue — StockETF{% endblock %}
+{% block page_title %}🗄️ Catalogue — {{ articles|length }} article(s){% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>{{ articles|length }} article(s) affiché(s)</h2>
+  <a href="{{ url_for('ajouter_article') }}" class="btn btn-primary">➕ Ajouter</a>
+</div>
+<div class="card" style="margin-bottom:14px">
+  <form method="GET" class="filters">
+    <input type="text" name="q" value="{{ q }}" placeholder="🔍 Recherche…" style="min-width:200px">
+    <select name="famille">
+      <option value="">Toutes familles</option>
+      {% for f in familles %}<option value="{{ f['famille'] }}" {% if famille_sel==f['famille'] %}selected{% endif %}>{{ f['famille'] }}</option>{% endfor %}
+    </select>
+    <select name="container_id">
+      <option value="">Tous containers</option>
+      {% for c in containers %}<option value="{{ c['id'] }}" {% if container_sel==c['id']|string %}selected{% endif %}>{{ c['nom'] }}</option>{% endfor %}
+    </select>
+    <select name="etat">
+      <option value="">Tous états</option>
+      <option value="RUPTURE" {% if etat_sel=='RUPTURE' %}selected{% endif %}>🔴 Rupture</option>
+      <option value="CRITIQUE" {% if etat_sel=='CRITIQUE' %}selected{% endif %}>🟠 Critique</option>
+      <option value="ALERTE" {% if etat_sel=='ALERTE' %}selected{% endif %}>🟡 Alerte</option>
+      <option value="OK" {% if etat_sel=='OK' %}selected{% endif %}>🟢 OK</option>
+    </select>
+    <button type="submit" class="btn btn-navy">Filtrer</button>
+    <a href="{{ url_for('catalogue') }}" class="btn btn-outline">Reset</a>
+  </form>
+</div>
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>ID</th><th>Famille</th><th>Désignation</th><th>Réf.</th><th>Container</th><th>Empl.</th><th>Unité</th><th>Prix</th><th>Stock</th><th>Min</th><th>Alerte</th><th>Valeur</th><th>État</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for a in articles %}
+  {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
+  <tr>
+    <td><code style="font-size:.72rem;font-weight:700;color:#1a1a2e">{{ a['id'] }}</code></td>
+    <td><span style="font-size:.68rem;background:#f0f2f5;padding:1px 6px;border-radius:10px">{{ a['famille'] }}</span></td>
+    <td>
+      <strong style="font-size:.8rem">{{ a['designation'] }}</strong>
+      {% if a['marque'] %}<br><span style="font-size:.68rem;color:#888">{{ a['marque'] }}</span>{% endif %}
+      {% if a['observations'] %}<br><span style="font-size:.66rem;color:#E8661A">{{ a['observations'] }}</span>{% endif %}
+    </td>
+    <td style="font-size:.72rem;color:#888">{{ a['reference'] or '—' }}</td>
+    <td><span style="font-weight:700;color:#E8661A;font-size:.78rem">{{ a['container_code'] or '?' }}</span></td>
+    <td style="font-size:.75rem">{{ a['emplacement'] }}</td>
+    <td style="font-size:.72rem">{{ a['unite'] }}</td>
+    <td>{{ "%.2f"|format(a['prix_achat']) }}</td>
+    <td><span class="stock-num {{ etat|lower }}">{{ a['stock'] }}</span></td>
+    <td style="color:#aaa">{{ a['stock_min'] }}</td>
+    <td style="color:#aaa">{{ a['stock_alerte'] }}</td>
+    <td><strong>{{ "%.0f"|format(a['stock']*a['prix_achat']) }} €</strong></td>
+    <td>
+      {% if etat=='RUPTURE' %}<span class="badge badge-rupture">🔴</span>
+      {% elif etat=='CRITIQUE' %}<span class="badge badge-critique">🟠</span>
+      {% elif etat=='ALERTE' %}<span class="badge badge-alerte">🟡</span>
+      {% else %}<span class="badge badge-ok">🟢</span>{% endif %}
+    </td>
+    <td style="white-space:nowrap">
+      <a href="{{ url_for('modifier_article', id=a['id']) }}" class="btn btn-outline btn-sm">✏️</a>
+      <form method="POST" action="{{ url_for('supprimer_article', id=a['id']) }}" style="display:inline" onsubmit="return confirm('Archiver ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="14" style="text-align:center;padding:30px;color:#888">Aucun article</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

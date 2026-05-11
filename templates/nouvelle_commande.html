@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Nouvelle Commande — StockETF{% endblock %}
+{% block page_title %}📋 Nouvelle commande{% endblock %}
+{% block content %}
+<div class="page-header"><h2>Passer une commande fournisseur</h2><a href="{{ url_for('commandes') }}" class="btn btn-outline">← Retour</a></div>
+<div class="card">
+<form method="POST">
+  <div class="form-grid">
+    <div class="form-group"><label>Date *</label><input type="date" name="date_demande" value="{{ today }}" required></div>
+    <div class="form-group"><label>Article *</label>
+      <select name="article_id" id="art" required onchange="fillArticle()">
+        <option value="">-- Choisir --</option>
+        {% for a in articles %}
+        <option value="{{ a['id'] }}" data-four="{{ a['fournisseur'] }}" data-stock="{{ a['stock'] }}" data-min="{{ a['stock_min'] }}"
+          {% if a['stock'] <= a['stock_min'] %}style="color:#dc2626;font-weight:600"{% endif %}>
+          {{ a['id'] }} — {{ a['designation'] }}{% if a['stock'] <= a['stock_min'] %} ⚠️{% endif %} (stock: {{ a['stock'] }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Quantité *</label><input type="number" name="quantite" required min="1" value="1"></div>
+    <div class="form-group"><label>Fournisseur</label>
+      <select name="fournisseur" id="four">
+        <option value="">-- Choisir --</option>
+        {% for f in fournisseurs %}<option value="{{ f['nom'] }}">{{ f['nom'] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Prix unitaire (€)</label><input type="number" name="prix_unitaire" min="0" step="0.01" value="0"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Commentaire</label><textarea name="commentaire" placeholder="Ex: Rupture, stock critique, chantier urgent…"></textarea></div>
+  </div>
+  <div id="info" style="display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px;margin:12px 0;font-size:.83rem">
+    Stock actuel : <strong id="i-stock">—</strong> | Seuil min : <strong id="i-min">—</strong>
+  </div>
+  <div style="margin-top:14px;display:flex;gap:10px">
+    <button type="submit" class="btn btn-primary">📋 Créer la commande</button>
+    <a href="{{ url_for('commandes') }}" class="btn btn-outline">Annuler</a>
+  </div>
+</form>
+</div>
+<script>
+function fillArticle() {
+  var sel = document.getElementById('art');
+  var opt = sel.options[sel.selectedIndex];
+  if (!sel.value) { document.getElementById('info').style.display='none'; return; }
+  var four = opt.getAttribute('data-four');
+  if (four) {
+    var fs = document.getElementById('four');
+    for (var i=0;i<fs.options.length;i++) { if(fs.options[i].value===four){fs.selectedIndex=i;break;} }
+  }
+  document.getElementById('i-stock').textContent = opt.getAttribute('data-stock');
+  document.getElementById('i-min').textContent = opt.getAttribute('data-min');
+  document.getElementById('info').style.display='block';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Paramètres — StockETF{% endblock %}
+{% block page_title %}⚙️ Paramètres{% endblock %}
+{% block content %}
+<div class="kpi-grid">
+  <div class="kpi blue"><div class="kpi-val">{{ users|length }}</div><div class="kpi-label">👤 Utilisateurs</div></div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title">👤 Gestion des utilisateurs</div>
+  <div class="table-wrap" style="margin-bottom:18px">
+  <table>
+    <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Créé le</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+      <td><strong>{{ u['nom'] }}</strong></td>
+      <td>{{ u['email'] }}</td>
+      <td>
+        {% if u['role']=='admin' %}<span class="badge" style="background:#fef3c7;color:#92400e">👑 Admin</span>
+        {% elif u['role']=='responsable' %}<span class="badge badge-ok">Responsable</span>
+        {% elif u['role']=='magasinier' %}<span class="badge badge-cours">Magasinier</span>
+        {% elif u['role']=='chef_chantier' %}<span class="badge badge-attente">Chef chantier</span>
+        {% else %}<span class="badge">{{ u['role'] }}</span>{% endif %}
+      </td>
+      <td style="font-size:.75rem;color:#888">{{ u['created_at'][:10] if u['created_at'] else '—' }}</td>
+      <td>
+        {% if u['id'] != session.user_id %}
+        <form method="POST" action="{{ url_for('supprimer_utilisateur', id=u['id']) }}" onsubmit="return confirm('Désactiver cet utilisateur ?')">
+          <button type="submit" class="btn btn-danger btn-sm">🗑 Désactiver</button>
+        </form>
+        {% else %}
+        <span style="font-size:.72rem;color:#aaa">Vous-même</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if session.user_role == 'admin' %}
+  <div style="border-top:1px solid #e8e8e8;padding-top:16px">
+    <div class="card-title">➕ Ajouter un utilisateur</div>
+    <form method="POST" action="{{ url_for('ajouter_utilisateur') }}">
+      <div class="form-grid">
+        <div class="form-group"><label>Nom *</label><input type="text" name="nom" required placeholder="Prénom Nom"></div>
+        <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="prenom@stocketf.com"></div>
+        <div class="form-group"><label>Mot de passe *</label><input type="password" name="password" required placeholder="••••••••" minlength="6"></div>
+        <div class="form-group"><label>Rôle</label>
+          <select name="role">
+            <option value="magasinier">Magasinier</option>
+            <option value="chef_chantier">Chef de chantier</option>
+            <option value="responsable">Responsable</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px"><button type="submit" class="btn btn-primary">➕ Créer l'utilisateur</button></div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-title">ℹ️ Informations système</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.83rem">
+    <div><strong>Version :</strong> StockETF v3.0</div>
+    <div><strong>Date :</strong> Mai 2026</div>
+    <div><strong>Connexion actuelle :</strong> {{ session.user_nom }}</div>
+    <div><strong>Rôle :</strong> {{ session.user_role }}</div>
+    <div style="grid-column:1/-1">
+      <strong>Comptes démo :</strong>
+      <code style="font-size:.75rem;background:#f0f2f5;padding:4px 8px;border-radius:5px;margin-left:6px">
+        admin@stocketf.com / admin2026 · stock@stocketf.com / stock2026 · responsable@stocketf.com / resp2026
+      </code>
+    </div>
+  </div>
+</div>
+{% endblock %}

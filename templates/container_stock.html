@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Stock {{ ct.nom }} — StockETF{% endblock %}
+{% block page_title %}📦 {{ ct.nom }} — {{ ct.code }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>Stock du container — {{ ct.emplacement or 'Emplacement non défini' }}</h2>
+  <div style="display:flex;gap:8px">
+    <a href="{{ url_for('nouveau_transfert') }}" class="btn btn-outline">🔀 Transférer</a>
+    <a href="{{ url_for('containers') }}" class="btn btn-outline">← Retour</a>
+  </div>
+</div>
+
+<div class="kpi-grid" style="margin-bottom:18px">
+  <div class="kpi blue"><div class="kpi-val">{{ articles|length }}</div><div class="kpi-label">Articles</div></div>
+  <div class="kpi green"><div class="kpi-val">{{ "%.0f"|format(valeur) }} €</div><div class="kpi-label">Valeur totale</div></div>
+  <div class="kpi red"><div class="kpi-val">{{ articles|selectattr('stock','eq',0)|list|length }}</div><div class="kpi-label">Ruptures</div></div>
+  <div class="kpi amber"><div class="kpi-val">
+    {% set crit = articles|selectattr('stock','gt',0)|list %}
+    {{ crit|selectattr('stock_min','gt',0)|list|length }}
+  </div><div class="kpi-label">Alertes</div></div>
+  <div class="kpi">
+    <div class="kpi-val">
+      {% if ct.statut=='ACTIF' %}✅{% elif ct.statut=='EN DEPLACEMENT' %}🚛{% else %}⚠️{% endif %}
+    </div>
+    <div class="kpi-label">{{ ct.statut }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title">📋 Articles dans ce container</div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>Famille</th><th>Désignation</th><th>Empl.</th><th>Unité</th><th>Prix</th><th>Stock</th><th>Min</th><th>État</th><th>Valeur</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for a in articles %}
+    {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
+    <tr>
+      <td><code style="font-size:.72rem;font-weight:700;color:#1a1a2e">{{ a['id'] }}</code></td>
+      <td><span style="font-size:.7rem;background:#f0f2f5;padding:1px 6px;border-radius:10px">{{ a['famille'] }}</span></td>
+      <td><strong style="font-size:.8rem">{{ a['designation'] }}</strong></td>
+      <td>{{ a['emplacement'] }}</td>
+      <td style="font-size:.74rem;color:#888">{{ a['unite'] }}</td>
+      <td>{{ "%.2f"|format(a['prix_achat']) }} €</td>
+      <td><span class="stock-num {{ etat|lower }}">{{ a['stock'] }}</span></td>
+      <td style="color:#888">{{ a['stock_min'] }}</td>
+      <td>
+        {% if etat=='RUPTURE' %}<span class="badge badge-rupture">🔴</span>
+        {% elif etat=='CRITIQUE' %}<span class="badge badge-critique">🟠</span>
+        {% elif etat=='ALERTE' %}<span class="badge badge-alerte">🟡</span>
+        {% else %}<span class="badge badge-ok">🟢</span>{% endif %}
+      </td>
+      <td><strong>{{ "%.0f"|format(a['stock']*a['prix_achat']) }} €</strong></td>
+      <td>
+        <a href="{{ url_for('modifier_article', id=a['id']) }}" class="btn btn-outline btn-sm">✏️</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="11" style="text-align:center;padding:30px;color:#888">Aucun article dans ce container</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% if mouvs %}
+<div class="card">
+  <div class="card-title">🔄 Derniers mouvements</div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th>Article</th><th>Qté</th><th>Réf. doc</th></tr></thead>
+    <tbody>
+    {% for m in mouvs %}
+    <tr>
+      <td>{{ m['date_mouvement'] }}</td>
+      <td>
+        {% if m['type_mouvement']=='SORTIE' %}<span class="badge badge-critique">📤 Sortie</span>
+        {% elif m['type_mouvement']=='RECEPTION' %}<span class="badge badge-ok">📥 Récep.</span>
+        {% elif m['type_mouvement']=='TRANSFERT' %}<span class="badge badge-cours">🔀 Transfert</span>
+        {% else %}<span class="badge">{{ m['type_mouvement'] }}</span>{% endif %}
+      </td>
+      <td>{{ m['designation'] or m['article_id'] }}</td>
+      <td>{{ m['quantite'] }}</td>
+      <td><code style="font-size:.72rem;color:#E8661A">{{ m['reference_doc'] }}</code></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

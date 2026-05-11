@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Familles — StockETF{% endblock %}
+{% block page_title %}🏷️ Gestion des Familles{% endblock %}
+{% block content %}
+<div class="page-header"><h2>{{ familles|length }} famille(s)</h2></div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-title">➕ Ajouter une famille</div>
+  <form method="POST" action="{{ url_for('ajouter_famille') }}">
+    <div class="form-grid">
+      <div class="form-group"><label>Nom * (en majuscules)</label><input type="text" name="nom" required placeholder="Ex: MATERIEL LOURD"></div>
+      <div class="form-group"><label>Icône (emoji)</label><input type="text" name="icone" value="📦" maxlength="4" placeholder="📦"></div>
+      <div class="form-group"><label>Couleur</label><input type="color" name="couleur" value="#E8661A"></div>
+      <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="Description de la famille…"></div>
+    </div>
+    <div style="margin-top:14px"><button type="submit" class="btn btn-primary">➕ Ajouter</button></div>
+  </form>
+</div>
+
+<div class="card">
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Icône</th><th>Nom</th><th>Couleur</th><th>Articles</th><th>Description</th><th>Action</th></tr></thead>
+  <tbody>
+  {% for row in familles %}
+  <tr>
+    <td style="font-size:1.3rem;text-align:center">{{ row.f.icone }}</td>
+    <td><strong>{{ row.f.nom }}</strong></td>
+    <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{ row.f.couleur }};vertical-align:middle"></span> {{ row.f.couleur }}</td>
+    <td><strong>{{ row.nb }}</strong></td>
+    <td style="font-size:.78rem;color:#888">{{ row.f.description or '—' }}</td>
+    <td>
+      {% if row.nb == 0 %}
+      <form method="POST" action="{{ url_for('supprimer_famille', id=row.f.id) }}" onsubmit="return confirm('Supprimer cette famille ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑 Supprimer</button>
+      </form>
+      {% else %}
+      <span style="font-size:.72rem;color:#aaa">{{ row.nb }} article(s) — non supprimable</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}
