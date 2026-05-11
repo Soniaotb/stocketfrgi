@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Inventaire {{ inv['numero'] }}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;background:#fff;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #6366f1;padding-bottom:14px;margin-bottom:18px}
+.logo h1{font-size:1.4rem;font-weight:900;color:#1a1a2e}.logo span{color:#E8661A}
+.doc-title h2{font-size:1.2rem;font-weight:800;color:#6366f1;text-align:right}
+.doc-title .num{font-size:1rem;font-weight:700;background:#f0f2f5;padding:4px 12px;border-radius:6px;display:inline-block;margin-top:4px}
+.info-box{border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr}
+.info-row{display:flex;margin-bottom:5px}
+.info-label{font-weight:600;min-width:130px;color:#555;font-size:.8rem}
+.info-val{color:#111;font-size:.82rem}
+.result-box{margin-bottom:20px;text-align:center;padding:20px;border-radius:10px;border:2px solid}
+.result-ok{border-color:#16a34a;background:#f0fdf4}
+.result-neg{border-color:#dc2626;background:#fef2f2}
+.result-pos{border-color:#d97706;background:#fffbeb}
+.result-num{font-size:2.5rem;font-weight:900}
+.result-label{font-size:.88rem;color:#555;margin-top:4px}
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:30px}
+.sig-box{border:1px solid #ccc;border-radius:8px;padding:16px;min-height:90px}
+.sig-box h4{font-size:.78rem;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:8px}
+.sig-line{border-bottom:1px dashed #aaa;margin-top:40px;margin-bottom:6px}
+.sig-label{font-size:.72rem;color:#888;text-align:center}
+.footer{margin-top:20px;text-align:center;font-size:.7rem;color:#aaa;border-top:1px solid #e0e0e0;padding-top:10px}
+.no-print{margin-bottom:16px;display:flex;gap:10px}
+.btn-print{background:#6366f1;color:#fff;border:none;padding:9px 20px;border-radius:7px;font-size:.88rem;font-weight:700;cursor:pointer}
+.btn-back{background:#f0f2f5;color:#333;border:none;padding:9px 20px;border-radius:7px;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-block}
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimer</button>
+  <a href="javascript:history.back()" class="btn-back">← Retour</a>
+</div>
+
+<div class="header">
+  <div class="logo">
+    <h1>📦 Stock<span>ETF</span> CN</h1>
+    <p style="font-size:.72rem;color:#666">Fiche d'inventaire</p>
+  </div>
+  <div class="doc-title">
+    <h2>📊 INVENTAIRE</h2>
+    <div class="num">{{ inv['numero'] }}</div>
+  </div>
+</div>
+
+<div class="info-box">
+  <div>
+    <div class="info-row"><span class="info-label">N° inventaire :</span><span class="info-val"><strong>{{ inv['numero'] }}</strong></span></div>
+    <div class="info-row"><span class="info-label">Date :</span><span class="info-val">{{ inv['date_inventaire'] }}</span></div>
+    <div class="info-row"><span class="info-label">Container :</span><span class="info-val">{{ inv['container_nom'] or '—' }}</span></div>
+    <div class="info-row"><span class="info-label">Commentaire :</span><span class="info-val">{{ inv['commentaire'] or '—' }}</span></div>
+  </div>
+  <div>
+    <div class="info-row"><span class="info-label">Article :</span><span class="info-val"><strong>{{ inv['article_id'] }}</strong></span></div>
+    <div class="info-row"><span class="info-label">Désignation :</span><span class="info-val"><strong>{{ inv['designation'] or '—' }}</strong></span></div>
+    <div class="info-row"><span class="info-label">Unité :</span><span class="info-val">{{ inv['unite'] or '—' }}</span></div>
+  </div>
+</div>
+
+{% set ecart = inv['stock_reel'] - inv['stock_theorique'] %}
+<div class="result-box {% if ecart==0 %}result-ok{% elif ecart<0 %}result-neg{% else %}result-pos{% endif %}">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
+    <div>
+      <div style="font-size:1.2rem;font-weight:700;color:#555">{{ inv['stock_theorique'] }}</div>
+      <div style="font-size:.8rem;color:#888">Stock théorique</div>
+    </div>
+    <div>
+      <div style="font-size:1.2rem;font-weight:700;color:#555">{{ inv['stock_reel'] }}</div>
+      <div style="font-size:.8rem;color:#888">Stock réel compté</div>
+    </div>
+    <div>
+      <div class="result-num" style="color:{% if ecart==0 %}#16a34a{% elif ecart<0 %}#dc2626{% else %}#d97706{% endif %}">
+        {{ ecart if ecart<=0 else '+'+ecart|string }}
+      </div>
+      <div class="result-label">Écart</div>
+    </div>
+  </div>
+</div>
+
+<div class="signatures">
+  <div class="sig-box">
+    <h4>✍️ Inventoriste</h4>
+    <p style="font-size:.75rem;color:#666">Compté par :</p>
+    <div class="sig-line"></div>
+    <div class="sig-label">Nom, date et signature</div>
+  </div>
+  <div class="sig-box">
+    <h4>✍️ Validation responsable</h4>
+    <p style="font-size:.75rem;color:#666">Validé par :</p>
+    <div class="sig-line"></div>
+    <div class="sig-label">Nom, date et signature</div>
+  </div>
+</div>
+
+<div class="footer">StockETF CN — {{ inv['numero'] }} — Document généré automatiquement</div>
+</body>
+</html>

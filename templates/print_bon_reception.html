@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Bon de Réception {{ bon['numero'] }}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#111;background:#fff;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #16a34a;padding-bottom:14px;margin-bottom:18px}
+.logo h1{font-size:1.6rem;font-weight:900;color:#1a1a2e}.logo span{color:#E8661A}
+.logo p{font-size:.75rem;color:#666;margin-top:2px}
+.doc-title h2{font-size:1.3rem;font-weight:800;color:#16a34a;text-transform:uppercase;text-align:right}
+.doc-title .num{font-size:1.1rem;font-weight:700;color:#1a1a2e;background:#f0f2f5;padding:4px 12px;border-radius:6px;display:inline-block;margin-top:4px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.info-box{border:1px solid #e0e0e0;border-radius:8px;padding:12px}
+.info-box h3{font-size:.78rem;text-transform:uppercase;color:#16a34a;font-weight:700;margin-bottom:8px}
+.info-row{display:flex;margin-bottom:4px}
+.info-label{font-weight:600;min-width:120px;color:#555;font-size:.8rem}
+.info-val{color:#111;font-size:.82rem}
+table{width:100%;border-collapse:collapse;margin-bottom:20px}
+thead th{background:#1a1a2e;color:#fff;padding:8px 10px;text-align:left;font-size:.78rem;text-transform:uppercase}
+tbody td{padding:8px 10px;border-bottom:1px solid #e8e8e8;font-size:.82rem}
+.total-row td{background:#f8f9fa;font-weight:700}
+.ecart-pos{color:#16a34a;font-weight:700}.ecart-neg{color:#dc2626;font-weight:700}
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:30px}
+.sig-box{border:1px solid #ccc;border-radius:8px;padding:16px;min-height:100px}
+.sig-box h4{font-size:.78rem;text-transform:uppercase;color:#555;font-weight:700;margin-bottom:8px}
+.sig-line{border-bottom:1px dashed #aaa;margin-top:40px;margin-bottom:6px}
+.sig-label{font-size:.72rem;color:#888;text-align:center}
+.footer{margin-top:30px;text-align:center;font-size:.7rem;color:#aaa;border-top:1px solid #e0e0e0;padding-top:10px}
+.no-print{margin-bottom:16px;display:flex;gap:10px}
+.btn-print{background:#16a34a;color:#fff;border:none;padding:9px 20px;border-radius:7px;font-size:.88rem;font-weight:700;cursor:pointer}
+.btn-back{background:#f0f2f5;color:#333;border:none;padding:9px 20px;border-radius:7px;font-size:.88rem;cursor:pointer;text-decoration:none;display:inline-block}
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
+  <a href="javascript:history.back()" class="btn-back">← Retour</a>
+</div>
+
+<div class="header">
+  <div class="logo">
+    <h1>📦 Stock<span>ETF</span></h1>
+    <p>Gestion de stock — Chantier Ferroviaire CN</p>
+  </div>
+  <div class="doc-title">
+    <h2>Bon de Réception</h2>
+    <div class="num">{{ bon['numero'] }}</div>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="info-box">
+    <h3>📋 Informations réception</h3>
+    <div class="info-row"><span class="info-label">N° bon :</span><span class="info-val"><strong>{{ bon['numero'] }}</strong></span></div>
+    <div class="info-row"><span class="info-label">Date :</span><span class="info-val">{{ bon['date_reception'] }}</span></div>
+    <div class="info-row"><span class="info-label">N° BL :</span><span class="info-val">{{ bon['num_bl'] or '—' }}</span></div>
+    <div class="info-row"><span class="info-label">Commentaire :</span><span class="info-val">{{ bon['commentaire'] or '—' }}</span></div>
+    {% if bon['container_nom'] %}
+    <div class="info-row"><span class="info-label">Container :</span><span class="info-val">{{ bon['container_nom'] }}</span></div>
+    {% endif %}
+  </div>
+  <div class="info-box">
+    <h3>🏭 Fournisseur</h3>
+    <div class="info-row"><span class="info-label">Nom :</span><span class="info-val"><strong>{{ bon['fournisseur'] }}</strong></span></div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Réf. Article</th><th>Désignation</th><th>Référence</th><th>Marque</th><th>Unité</th>
+      <th style="text-align:right">Qté cmd</th><th style="text-align:right">Qté reçue</th>
+      <th style="text-align:right">Écart</th><th style="text-align:right">Prix u. (€)</th><th style="text-align:right">Montant (€)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set ecart = bon['qte_recue'] - bon['qte_commandee'] %}
+    <tr>
+      <td><strong>{{ bon['article_id'] }}</strong></td>
+      <td><strong>{{ bon['designation'] or '—' }}</strong></td>
+      <td>{{ bon['reference'] or '—' }}</td>
+      <td>{{ bon['marque'] or '—' }}</td>
+      <td>{{ bon['unite'] or '—' }}</td>
+      <td style="text-align:right">{{ bon['qte_commandee'] }}</td>
+      <td style="text-align:right"><strong>{{ bon['qte_recue'] }}</strong></td>
+      <td style="text-align:right">
+        {% if ecart > 0 %}<span class="ecart-pos">+{{ ecart }}</span>
+        {% elif ecart < 0 %}<span class="ecart-neg">{{ ecart }}</span>
+        {% else %}<span>0</span>{% endif %}
+      </td>
+      <td style="text-align:right">{{ "%.2f"|format(bon['prix_unitaire']) }}</td>
+      <td style="text-align:right"><strong>{{ "%.2f"|format(bon['qte_recue'] * bon['prix_unitaire']) }}</strong></td>
+    </tr>
+    <tr class="total-row">
+      <td colspan="6" style="text-align:right">TOTAL</td>
+      <td style="text-align:right">{{ bon['qte_recue'] }}</td>
+      <td></td><td></td>
+      <td style="text-align:right">{{ "%.2f"|format(bon['qte_recue'] * bon['prix_unitaire']) }} €</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="signatures">
+  <div class="sig-box">
+    <h4>✍️ Contrôle réception</h4>
+    <p style="font-size:.75rem;color:#666">Réceptionné par :</p>
+    <div style="font-size:.75rem;color:#888;margin-top:6px">☐ Quantités conformes &nbsp;&nbsp; ☐ Emballages OK &nbsp;&nbsp; ☐ Manquants signalés</div>
+    <div class="sig-line"></div>
+    <div class="sig-label">Nom, date et signature</div>
+  </div>
+  <div class="sig-box">
+    <h4>✍️ Validation magasinier</h4>
+    <p style="font-size:.75rem;color:#666">Validé par :</p>
+    <div class="sig-line"></div>
+    <div class="sig-label">Nom, date et signature</div>
+  </div>
+</div>
+
+<div class="footer">StockETF CN — {{ bon['numero'] }} — Document généré automatiquement</div>
+</body>
+</html>

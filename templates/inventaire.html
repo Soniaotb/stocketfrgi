@@ -3,13 +3,13 @@
 {% block page_title %}📊 Inventaire{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2>{{ inventaires|length }} saisie(s) d'inventaire</h2>
+  <h2>{{ inventaires|length }} saisie(s)</h2>
   <a href="{{ url_for('nouvel_inventaire') }}" class="btn btn-primary">📊 Nouvel inventaire</a>
 </div>
 <div class="card">
 <div class="table-wrap">
 <table>
-  <thead><tr><th>N°</th><th>Date</th><th>Container</th><th>Article</th><th>Désignation</th><th>Stock théorique</th><th>Stock réel</th><th>Écart</th><th>Commentaire</th></tr></thead>
+  <thead><tr><th>N°</th><th>Date</th><th>Container</th><th>Article</th><th>Désignation</th><th>Théorique</th><th>Réel</th><th>Écart</th><th>Commentaire</th><th>Actions</th></tr></thead>
   <tbody>
   {% for i in inventaires %}
   {% set ecart = i['stock_reel'] - i['stock_theorique'] %}
@@ -27,9 +27,12 @@
       {% else %}<span style="color:#888">0</span>{% endif %}
     </td>
     <td style="font-size:.75rem;color:#666">{{ i['commentaire'] or '—' }}</td>
+    <td>
+      <a href="{{ url_for('imprimer_inventaire', id=i['id']) }}" target="_blank" class="btn btn-outline btn-sm">🖨️</a>
+    </td>
   </tr>
   {% else %}
-  <tr><td colspan="9" style="text-align:center;padding:30px;color:#888">Aucun inventaire</td></tr>
+  <tr><td colspan="10" style="text-align:center;padding:30px;color:#888">Aucun inventaire</td></tr>
   {% endfor %}
   </tbody>
 </table>

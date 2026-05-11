@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <h2>{{ articles|length }} article(s) affiché(s)</h2>
-  <a href="{{ url_for('ajouter_article') }}" class="btn btn-primary">➕ Ajouter</a>
+  <div style="display:flex;gap:8px"><a href="{{ url_for('export_stock') }}" class="btn btn-outline">📊 Export CSV</a><a href="{{ url_for('ajouter_article') }}" class="btn btn-primary">➕ Ajouter</a></div>
 </div>
 <div class="card" style="margin-bottom:14px">
   <form method="GET" class="filters">

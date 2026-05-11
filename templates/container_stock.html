@@ -3,8 +3,10 @@
 {% block page_title %}📦 {{ ct.nom }} — {{ ct.code }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h2>Stock du container — {{ ct.emplacement or 'Emplacement non défini' }}</h2>
+  <h2>{{ ct.emplacement or 'Emplacement non défini' }}</h2>
   <div style="display:flex;gap:8px">
+    <a href="{{ url_for('export_container', id=ct.id) }}" class="btn btn-outline">📊 Export CSV</a>
+    <a href="{{ url_for('imprimer_container', id=ct.id) }}" target="_blank" class="btn btn-outline">🖨️ Imprimer fiche</a>
     <a href="{{ url_for('nouveau_transfert') }}" class="btn btn-outline">🔀 Transférer</a>
     <a href="{{ url_for('containers') }}" class="btn btn-outline">← Retour</a>
   </div>
@@ -14,14 +16,8 @@
   <div class="kpi blue"><div class="kpi-val">{{ articles|length }}</div><div class="kpi-label">Articles</div></div>
   <div class="kpi green"><div class="kpi-val">{{ "%.0f"|format(valeur) }} €</div><div class="kpi-label">Valeur totale</div></div>
   <div class="kpi red"><div class="kpi-val">{{ articles|selectattr('stock','eq',0)|list|length }}</div><div class="kpi-label">Ruptures</div></div>
-  <div class="kpi amber"><div class="kpi-val">
-    {% set crit = articles|selectattr('stock','gt',0)|list %}
-    {{ crit|selectattr('stock_min','gt',0)|list|length }}
-  </div><div class="kpi-label">Alertes</div></div>
   <div class="kpi">
-    <div class="kpi-val">
-      {% if ct.statut=='ACTIF' %}✅{% elif ct.statut=='EN DEPLACEMENT' %}🚛{% else %}⚠️{% endif %}
-    </div>
+    <div class="kpi-val">{% if ct.statut=='ACTIF' %}✅{% elif ct.statut=='EN DEPLACEMENT' %}🚛{% else %}⚠️{% endif %}</div>
     <div class="kpi-label">{{ ct.statut }}</div>
   </div>
 </div>
@@ -50,12 +46,13 @@
         {% else %}<span class="badge badge-ok">🟢</span>{% endif %}
       </td>
       <td><strong>{{ "%.0f"|format(a['stock']*a['prix_achat']) }} €</strong></td>
-      <td>
+      <td style="white-space:nowrap">
         <a href="{{ url_for('modifier_article', id=a['id']) }}" class="btn btn-outline btn-sm">✏️</a>
+        <a href="{{ url_for('nouveau_bon_sortie') }}" class="btn btn-outline btn-sm" title="Sortie">📤</a>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="11" style="text-align:center;padding:30px;color:#888">Aucun article dans ce container</td></tr>
+    <tr><td colspan="11" style="text-align:center;padding:30px;color:#888">Aucun article</td></tr>
     {% endfor %}
     </tbody>
   </table>

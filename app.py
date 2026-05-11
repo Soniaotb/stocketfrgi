@@ -843,7 +843,7 @@ def api_article(id):
 @login_required
 def bons_sortie():
     conn = get_db()
-    bons = conn.execute("""SELECT bs.*, a.designation, a.unite, ch.nom as chantier_nom
+    bons = conn.execute("""SELECT bs.*, a.designation, a.unite, a.prix_achat, ch.nom as chantier_nom
         FROM bons_sortie bs LEFT JOIN articles a ON bs.article_id=a.id
         LEFT JOIN chantiers ch ON bs.chantier_id=ch.id ORDER BY bs.id DESC""").fetchall()
     conn.close()
@@ -1199,6 +1199,184 @@ def supprimer_utilisateur(id):
     conn.commit(); conn.close()
     flash('Utilisateur désactivé','success')
     return redirect(url_for('parametres'))
+
+
+# ─── IMPRESSION & EXPORT ──────────────────────────────────────────────────────
+
+@app.route('/bons-sortie/<int:id>/imprimer')
+@login_required
+def imprimer_bon_sortie(id):
+    conn = get_db()
+    bon = conn.execute("""SELECT bs.*, a.designation, a.unite, a.reference, a.marque,
+        a.prix_achat, ch.nom as chantier_nom, ch.code as chantier_code, ch.adresse as chantier_adresse,
+        c.nom as container_nom, u.nom as created_by_nom
+        FROM bons_sortie bs
+        LEFT JOIN articles a ON bs.article_id=a.id
+        LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
+        LEFT JOIN containers c ON a.container_id=c.id
+        LEFT JOIN utilisateurs u ON bs.created_by=u.id
+        WHERE bs.id=?""",(id,)).fetchone()
+    conn.close()
+    if not bon:
+        flash('Bon introuvable','error'); return redirect(url_for('bons_sortie'))
+    return render_template('print_bon_sortie.html', bon=bon)
+
+@app.route('/bons-sortie/<int:id>/supprimer', methods=['POST'])
+@login_required
+def supprimer_bon_sortie(id):
+    conn = get_db()
+    bon = conn.execute("SELECT * FROM bons_sortie WHERE id=?",(id,)).fetchone()
+    if bon:
+        conn.execute("UPDATE articles SET stock=stock+? WHERE id=?",(bon['quantite'],bon['article_id']))
+        conn.execute("DELETE FROM bons_sortie WHERE id=?",(id,))
+        conn.commit()
+        flash(f'Bon {bon["numero"]} supprime - stock restaure','success')
+    conn.close()
+    return redirect(url_for('bons_sortie'))
+
+@app.route('/bons-reception/<int:id>/imprimer')
+@login_required
+def imprimer_bon_reception(id):
+    conn = get_db()
+    bon = conn.execute("""SELECT br.*, a.designation, a.unite, a.reference, a.marque,
+        c.nom as container_nom, u.nom as created_by_nom
+        FROM bons_reception br
+        LEFT JOIN articles a ON br.article_id=a.id
+        LEFT JOIN containers c ON a.container_id=c.id
+        LEFT JOIN utilisateurs u ON br.created_by=u.id
+        WHERE br.id=?""",(id,)).fetchone()
+    conn.close()
+    if not bon:
+        flash('Bon introuvable','error'); return redirect(url_for('bons_reception'))
+    return render_template('print_bon_reception.html', bon=bon)
+
+@app.route('/bons-reception/<int:id>/supprimer', methods=['POST'])
+@login_required
+def supprimer_bon_reception(id):
+    conn = get_db()
+    bon = conn.execute("SELECT * FROM bons_reception WHERE id=?",(id,)).fetchone()
+    if bon:
+        conn.execute("UPDATE articles SET stock=stock-? WHERE id=?",(bon['qte_recue'],bon['article_id']))
+        conn.execute("DELETE FROM bons_reception WHERE id=?",(id,))
+        conn.commit()
+        flash(f'Bon {bon["numero"]} supprime','success')
+    conn.close()
+    return redirect(url_for('bons_reception'))
+
+@app.route('/containers/<int:id>/imprimer')
+@login_required
+def imprimer_container(id):
+    conn = get_db()
+    ct = conn.execute("SELECT * FROM containers WHERE id=?",(id,)).fetchone()
+    articles = conn.execute("SELECT * FROM articles WHERE container_id=? AND actif=1 ORDER BY famille, designation",(id,)).fetchall()
+    valeur = sum(a['stock']*a['prix_achat'] for a in articles)
+    conn.close()
+    if not ct:
+        flash('Container introuvable','error'); return redirect(url_for('containers'))
+    return render_template('print_container.html', ct=ct, articles=articles, valeur=valeur, get_etat=get_etat_stock)
+
+@app.route('/inventaire/<int:id>/imprimer')
+@login_required
+def imprimer_inventaire(id):
+    conn = get_db()
+    inv = conn.execute("""SELECT i.*, a.designation, a.unite, c.nom as container_nom
+        FROM inventaires i LEFT JOIN articles a ON i.article_id=a.id
+        LEFT JOIN containers c ON i.container_id=c.id WHERE i.id=?""",(id,)).fetchone()
+    conn.close()
+    if not inv:
+        flash('Inventaire introuvable','error'); return redirect(url_for('inventaire'))
+    return render_template('print_inventaire.html', inv=inv)
+
+@app.route('/export/stock')
+@login_required
+def export_stock():
+    import csv, io
+    conn = get_db()
+    articles = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.actif=1 ORDER BY a.famille, a.designation""").fetchall()
+    conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(['ID','Famille','Designation','Reference','Marque','Container','Emplacement',
+                     'Unite','Prix achat','Fournisseur','Stock','Stock min','Stock alerte',
+                     'Stock max','Valeur','Etat','Observations'])
+    for a in articles:
+        etat = get_etat_stock(a['stock'],a['stock_min'],a['stock_alerte'])
+        writer.writerow([a['id'],a['famille'],a['designation'],a['reference'],a['marque'],
+                         a['container_nom'] or '',a['emplacement'],a['unite'],
+                         str(a['prix_achat']).replace('.',','),a['fournisseur'],
+                         a['stock'],a['stock_min'],a['stock_alerte'],a['stock_max'],
+                         str(round(a['stock']*a['prix_achat'],2)).replace('.',','),
+                         etat,a['observations']])
+    from flask import Response
+    return Response('\ufeff'+output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition':f'attachment;filename=stock_{date.today().isoformat()}.csv'})
+
+@app.route('/export/container/<int:id>')
+@login_required
+def export_container(id):
+    import csv, io
+    conn = get_db()
+    ct = conn.execute("SELECT * FROM containers WHERE id=?",(id,)).fetchone()
+    articles = conn.execute("SELECT * FROM articles WHERE container_id=? AND actif=1 ORDER BY famille,designation",(id,)).fetchall()
+    conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow([f'CONTAINER : {ct["nom"]} ({ct["code"]}) - {date.today().isoformat()}'])
+    writer.writerow(['ID','Famille','Designation','Reference','Emplacement','Unite','Prix','Stock','Min','Valeur','Etat'])
+    for a in articles:
+        etat = get_etat_stock(a['stock'],a['stock_min'],a['stock_alerte'])
+        writer.writerow([a['id'],a['famille'],a['designation'],a['reference'],a['emplacement'],
+                         a['unite'],str(a['prix_achat']).replace('.',','),a['stock'],a['stock_min'],
+                         str(round(a['stock']*a['prix_achat'],2)).replace('.',','),etat])
+    from flask import Response
+    return Response('\ufeff'+output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition':f'attachment;filename=container_{ct["code"]}_{date.today().isoformat()}.csv'})
+
+@app.route('/export/bons-sortie')
+@login_required
+def export_bons_sortie():
+    import csv, io
+    conn = get_db()
+    bons = conn.execute("""SELECT bs.*, a.designation, a.unite, a.prix_achat,
+        ch.nom as chantier_nom FROM bons_sortie bs
+        LEFT JOIN articles a ON bs.article_id=a.id
+        LEFT JOIN chantiers ch ON bs.chantier_id=ch.id ORDER BY bs.id DESC""").fetchall()
+    conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(['N','Date','Demandeur','Chantier','Article','Designation','Qte','Unite','Prix','Montant','Commentaire'])
+    for b in bons:
+        writer.writerow([b['numero'],b['date_sortie'],b['demandeur'],b['chantier_nom'] or '',
+                         b['article_id'],b['designation'] or '',b['quantite'],b['unite'] or '',
+                         str(b['prix_achat'] or 0).replace('.',','),
+                         str(round(b['quantite']*(b['prix_achat'] or 0),2)).replace('.',','),
+                         b['commentaire'] or ''])
+    from flask import Response
+    return Response('\ufeff'+output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition':f'attachment;filename=bons_sortie_{date.today().isoformat()}.csv'})
+
+@app.route('/export/bons-reception')
+@login_required
+def export_bons_reception():
+    import csv, io
+    conn = get_db()
+    bons = conn.execute("""SELECT br.*, a.designation, a.unite FROM bons_reception br
+        LEFT JOIN articles a ON br.article_id=a.id ORDER BY br.id DESC""").fetchall()
+    conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(['N','Date','Fournisseur','BL','Article','Designation','Qte cmd','Qte recue','Prix u','Montant','Commentaire'])
+    for b in bons:
+        writer.writerow([b['numero'],b['date_reception'],b['fournisseur'],b['num_bl'] or '',
+                         b['article_id'],b['designation'] or '',b['qte_commandee'],b['qte_recue'],
+                         str(b['prix_unitaire']).replace('.',','),
+                         str(round(b['qte_recue']*b['prix_unitaire'],2)).replace('.',','),
+                         b['commentaire'] or ''])
+    from flask import Response
+    return Response('\ufeff'+output.getvalue(), mimetype='text/csv',
+        headers={'Content-Disposition':f'attachment;filename=bons_reception_{date.today().isoformat()}.csv'})
 
 if __name__ == '__main__':
     app.run(debug=False)

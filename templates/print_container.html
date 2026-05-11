@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiche Container {{ ct['nom'] }}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#111;background:#fff;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a1a2e;padding-bottom:12px;margin-bottom:16px}
+.logo h1{font-size:1.4rem;font-weight:900;color:#1a1a2e}.logo span{color:#E8661A}
+.doc-title h2{font-size:1.2rem;font-weight:800;color:#1a1a2e;text-align:right}
+.doc-title .code{font-size:1.5rem;font-weight:900;color:#E8661A;text-align:right}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.kpi{border:1px solid #e0e0e0;border-radius:6px;padding:10px;text-align:center}
+.kpi-val{font-size:1.4rem;font-weight:800;color:#1a1a2e}
+.kpi-label{font-size:.7rem;color:#666;margin-top:2px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.78rem}
+thead th{background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left;font-size:.68rem;text-transform:uppercase}
+tbody td{padding:5px 8px;border-bottom:1px solid #eee}
+.ok{color:#16a34a;font-weight:700}.alerte{color:#d97706;font-weight:700}
+.critique{color:#dc2626;font-weight:700}.rupture{color:#7c3aed;font-weight:700}
+.footer{margin-top:16px;text-align:center;font-size:.68rem;color:#aaa;border-top:1px solid #e0e0e0;padding-top:8px}
+.no-print{margin-bottom:14px;display:flex;gap:10px}
+.btn-print{background:#1a1a2e;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:.85rem;font-weight:700;cursor:pointer}
+.btn-back{background:#f0f2f5;color:#333;border:1px solid #ddd;padding:8px 18px;border-radius:6px;font-size:.85rem;cursor:pointer;text-decoration:none;display:inline-block}
+@media print{.no-print{display:none!important}body{padding:8px}}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
+  <a href="javascript:history.back()" class="btn-back">← Retour</a>
+</div>
+
+<div class="header">
+  <div class="logo">
+    <h1>📦 Stock<span>ETF</span> CN</h1>
+    <p style="font-size:.72rem;color:#666">Fiche de stock container — {{ ct['emplacement'] or '' }}</p>
+    <p style="font-size:.68rem;color:#aaa;margin-top:2px">Édité le : {{ ct['created_at'][:10] if ct['created_at'] else '' }}</p>
+  </div>
+  <div class="doc-title">
+    <h2>FICHE CONTAINER</h2>
+    <div class="code">{{ ct['code'] }}</div>
+    <div style="font-size:.8rem;color:#555;text-align:right;margin-top:3px">{{ ct['nom'] }}</div>
+    <div style="font-size:.7rem;color:#888;text-align:right">Statut : <strong>{{ ct['statut'] }}</strong></div>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="kpi"><div class="kpi-val">{{ articles|length }}</div><div class="kpi-label">Articles</div></div>
+  <div class="kpi"><div class="kpi-val" style="color:#E8661A">{{ "%.0f"|format(valeur) }} €</div><div class="kpi-label">Valeur totale</div></div>
+  <div class="kpi"><div class="kpi-val" style="color:#dc2626">{{ articles|selectattr('stock','eq',0)|list|length }}</div><div class="kpi-label">Ruptures</div></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>ID</th><th>Famille</th><th>Désignation</th><th>Réf.</th><th>Empl.</th><th>Unité</th><th>Prix</th><th style="text-align:right">Stock</th><th>Min</th><th style="text-align:right">Valeur</th><th>État</th></tr>
+  </thead>
+  <tbody>
+  {% for a in articles %}
+  {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
+  <tr>
+    <td><strong>{{ a['id'] }}</strong></td>
+    <td>{{ a['famille'] }}</td>
+    <td>{{ a['designation'] }}</td>
+    <td style="color:#888">{{ a['reference'] or '—' }}</td>
+    <td>{{ a['emplacement'] }}</td>
+    <td>{{ a['unite'] }}</td>
+    <td>{{ "%.2f"|format(a['prix_achat']) }}</td>
+    <td style="text-align:right"><strong class="{{ etat|lower }}">{{ a['stock'] }}</strong></td>
+    <td>{{ a['stock_min'] }}</td>
+    <td style="text-align:right">{{ "%.2f"|format(a['stock']*a['prix_achat']) }}</td>
+    <td>
+      {% if etat=='RUPTURE' %}<strong class="rupture">🔴</strong>
+      {% elif etat=='CRITIQUE' %}<strong class="critique">🟠</strong>
+      {% elif etat=='ALERTE' %}<strong class="alerte">🟡</strong>
+      {% else %}<strong class="ok">🟢</strong>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  <tr style="background:#f8f9fa;font-weight:700">
+    <td colspan="9" style="text-align:right">TOTAL</td>
+    <td style="text-align:right">{{ "%.2f"|format(valeur) }} €</td>
+    <td></td>
+  </tr>
+  </tbody>
+</table>
+
+<div class="footer">StockETF CN — Container {{ ct['code'] }} — {{ ct['nom'] }} — Fiche générée automatiquement</div>
+</body>
+</html>

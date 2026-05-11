@@ -4,19 +4,24 @@
 {% block content %}
 <div class="page-header">
   <h2>{{ bons|length }} bon(s)</h2>
-  <a href="{{ url_for('nouveau_bon_reception') }}" class="btn btn-primary">📥 Nouveau bon</a>
+  <div style="display:flex;gap:8px">
+    <a href="{{ url_for('export_bons_reception') }}" class="btn btn-outline">📊 Export CSV</a>
+    <a href="{{ url_for('nouveau_bon_reception') }}" class="btn btn-primary">📥 Nouveau bon</a>
+  </div>
 </div>
 <div class="card">
 <div class="table-wrap">
 <table>
-  <thead><tr><th>N°</th><th>Date</th><th>Fournisseur</th><th>N° BL</th><th>Article</th><th>Désignation</th><th>Qté cmd</th><th>Qté reçue</th><th>Écart</th><th>Prix u.</th><th>Montant</th><th>Commentaire</th></tr></thead>
+  <thead>
+    <tr><th>N°</th><th>Date</th><th>Fournisseur</th><th>N° BL</th><th>Article</th><th>Désignation</th><th>Qté cmd</th><th>Qté reçue</th><th>Écart</th><th>Prix u.</th><th>Montant</th><th>Commentaire</th><th>Actions</th></tr>
+  </thead>
   <tbody>
   {% for b in bons %}
   {% set ecart = b['qte_recue'] - b['qte_commandee'] %}
   <tr>
     <td><strong style="color:#16a34a">{{ b['numero'] }}</strong></td>
     <td>{{ b['date_reception'] }}</td>
-    <td>{{ b['fournisseur'] }}</td>
+    <td><strong>{{ b['fournisseur'] }}</strong></td>
     <td style="font-size:.72rem">{{ b['num_bl'] or '—' }}</td>
     <td><code style="font-size:.72rem">{{ b['article_id'] }}</code></td>
     <td>{{ b['designation'] or '—' }}</td>
@@ -26,9 +31,15 @@
     <td>{{ "%.2f"|format(b['prix_unitaire']) }} €</td>
     <td><strong>{{ "%.2f"|format(b['qte_recue']*b['prix_unitaire']) }} €</strong></td>
     <td style="font-size:.75rem;color:#666">{{ b['commentaire'] or '—' }}</td>
+    <td style="white-space:nowrap">
+      <a href="{{ url_for('imprimer_bon_reception', id=b['id']) }}" target="_blank" class="btn btn-outline btn-sm">🖨️</a>
+      <form method="POST" action="{{ url_for('supprimer_bon_reception', id=b['id']) }}" style="display:inline" onsubmit="return confirm('Supprimer ce bon de réception ?')">
+        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+      </form>
+    </td>
   </tr>
   {% else %}
-  <tr><td colspan="12" style="text-align:center;padding:30px;color:#888">Aucun bon de réception</td></tr>
+  <tr><td colspan="13" style="text-align:center;padding:30px;color:#888">Aucun bon de réception</td></tr>
   {% endfor %}
   </tbody>
 </table>
