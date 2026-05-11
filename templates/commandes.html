@@ -6,6 +6,7 @@
   <h2>{{ cmds|length }} commande(s)</h2>
   <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary">📋 Nouvelle commande</a>
 </div>
+
 <div class="card" style="margin-bottom:14px">
   <div class="filters">
     <a href="{{ url_for('commandes') }}" class="btn {% if not statut_sel %}btn-navy{% else %}btn-outline{% endif %} btn-sm">Toutes</a>
@@ -15,47 +16,88 @@
     <a href="{{ url_for('commandes', statut='RECEPTIONNEE') }}" class="btn {% if statut_sel=='RECEPTIONNEE' %}btn-navy{% else %}btn-outline{% endif %} btn-sm">📦 Réceptionnées</a>
   </div>
 </div>
-<div class="card">
-<div class="table-wrap">
-<table>
-  <thead><tr><th>N°</th><th>Date</th><th>Article</th><th>Désignation</th><th>Qté</th><th>Fournisseur</th><th>Prix u.</th><th>Montant</th><th>Statut</th><th>Livraison</th><th>Commentaire</th><th>Action</th></tr></thead>
-  <tbody>
-  {% for c in cmds %}
-  <tr>
-    <td><strong>{{ c['numero'] }}</strong></td>
-    <td>{{ c['date_demande'] }}</td>
-    <td><code style="font-size:.72rem">{{ c['article_id'] }}</code></td>
-    <td>{{ (c['designation'] or '—')[:28] }}</td>
-    <td><strong>{{ c['quantite'] }}</strong></td>
-    <td>{{ c['fournisseur'] or '—' }}</td>
-    <td>{{ "%.2f"|format(c['prix_unitaire']) }} €</td>
-    <td><strong>{{ "%.2f"|format(c['quantite']*c['prix_unitaire']) }} €</strong></td>
-    <td>
-      {% if c['statut']=='EN ATTENTE' %}<span class="badge badge-attente">⏳</span>
-      {% elif c['statut']=='VALIDEE' %}<span class="badge badge-validee">✅</span>
-      {% elif c['statut']=='EN COURS' %}<span class="badge badge-cours">🚚</span>
-      {% elif c['statut']=='RECEPTIONNEE' %}<span class="badge badge-receptionnee">📦</span>
-      {% else %}<span class="badge">{{ c['statut'] }}</span>{% endif %}
-    </td>
-    <td style="font-size:.75rem">{{ c['livraison_prevue'] or '—' }}</td>
-    <td style="font-size:.75rem;color:#666;max-width:100px">{{ c['commentaire'] or '—' }}</td>
-    <td style="white-space:nowrap">
-      <form method="POST" action="{{ url_for('maj_statut_commande', id=c['id']) }}" style="display:inline">
-        <select name="statut" onchange="this.form.submit()" style="font-size:.7rem;padding:2px 5px;border:1px solid #e0e0e0;border-radius:5px">
+
+{% for row in cmds %}
+<div class="card" style="margin-bottom:14px">
+  <!-- En-tête commande -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #f0f2f5">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#E8661A">{{ row.cmd['numero'] }}</div>
+        <div style="font-size:.72rem;color:#888">{{ row.cmd['date_demande'] }}</div>
+      </div>
+      <div>
+        <div style="font-size:.82rem;font-weight:600;color:#1a1a2e">🏭 {{ row.cmd['fournisseur'] or '—' }}</div>
+        {% if row.cmd['livraison_prevue'] %}
+        <div style="font-size:.72rem;color:#888">Livraison prévue : {{ row.cmd['livraison_prevue'] }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <span style="font-size:.78rem;font-weight:700;color:#555">{{ row.nb }} article(s)</span>
+        <span style="margin-left:8px;font-size:.9rem;font-weight:800;color:#E8661A">{{ "%.2f"|format(row.montant) }} €</span>
+      </div>
+      {% if row.cmd['commentaire'] %}
+      <div style="font-size:.75rem;color:#888;font-style:italic">{{ row.cmd['commentaire'] }}</div>
+      {% endif %}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <!-- Statut modifiable -->
+      <form method="POST" action="{{ url_for('maj_statut_commande', id=row.cmd['id']) }}" style="display:inline">
+        <select name="statut" onchange="this.form.submit()" style="font-size:.75rem;padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff">
           {% for s in ['EN ATTENTE','VALIDEE','EN COURS','RECEPTIONNEE','ANNULEE'] %}
-          <option value="{{ s }}" {% if s==c['statut'] %}selected{% endif %}>{{ s }}</option>{% endfor %}
+          <option value="{{ s }}" {% if s==row.cmd['statut'] %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
         </select>
       </form>
-      <form method="POST" action="{{ url_for('supprimer_commande', id=c['id']) }}" style="display:inline" onsubmit="return confirm('Supprimer ?')">
+      <!-- Badge statut -->
+      {% if row.cmd['statut']=='EN ATTENTE' %}<span class="badge badge-attente">⏳ En attente</span>
+      {% elif row.cmd['statut']=='VALIDEE' %}<span class="badge badge-validee">✅ Validée</span>
+      {% elif row.cmd['statut']=='EN COURS' %}<span class="badge badge-cours">🚚 En cours</span>
+      {% elif row.cmd['statut']=='RECEPTIONNEE' %}<span class="badge badge-receptionnee">📦 Réceptionnée</span>
+      {% elif row.cmd['statut']=='ANNULEE' %}<span class="badge badge-inactif">❌ Annulée</span>
+      {% endif %}
+      <form method="POST" action="{{ url_for('supprimer_commande', id=row.cmd['id']) }}" style="display:inline" onsubmit="return confirm('Supprimer cette commande ?')">
         <button type="submit" class="btn btn-danger btn-sm">🗑</button>
       </form>
-    </td>
-  </tr>
-  {% else %}
-  <tr><td colspan="12" style="text-align:center;padding:30px;color:#888">Aucune commande</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+    </div>
+  </div>
+
+  <!-- Lignes articles -->
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Article</th><th>Désignation</th><th>Unité</th><th style="text-align:right">Quantité</th><th style="text-align:right">Prix u. (€)</th><th style="text-align:right">Montant (€)</th></tr>
+    </thead>
+    <tbody>
+    {% for l in row.lignes %}
+    <tr>
+      <td style="color:#E8661A;font-weight:700">{{ loop.index }}</td>
+      <td><code style="font-size:.72rem">{{ l['article_id'] }}</code></td>
+      <td><strong>{{ l['designation'] or l['article_id'] }}</strong></td>
+      <td style="font-size:.75rem;color:#888">{{ l['unite'] or '—' }}</td>
+      <td style="text-align:right"><strong>{{ l['quantite'] }}</strong></td>
+      <td style="text-align:right">{{ "%.2f"|format(l['prix_unitaire']) }} €</td>
+      <td style="text-align:right"><strong>{{ "%.2f"|format(l['quantite']*l['prix_unitaire']) }} €</strong></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="text-align:center;color:#888;padding:10px">Aucune ligne</td></tr>
+    {% endfor %}
+    <!-- Total -->
+    <tr style="background:#f8f9fa;border-top:2px solid #e0e0e0">
+      <td colspan="4" style="text-align:right;font-weight:700;font-size:.8rem;color:#555">TOTAL COMMANDE</td>
+      <td style="text-align:right;font-weight:700">{{ row.lignes|sum(attribute='quantite') }}</td>
+      <td></td>
+      <td style="text-align:right;font-weight:800;color:#E8661A;font-size:.9rem">{{ "%.2f"|format(row.montant) }} €</td>
+    </tr>
+    </tbody>
+  </table>
+  </div>
 </div>
+{% else %}
+<div class="card" style="text-align:center;padding:40px;color:#888">
+  <div style="font-size:2rem;margin-bottom:10px">📋</div>
+  <div>Aucune commande</div>
+  <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary" style="margin-top:14px">Créer une commande</a>
 </div>
+{% endfor %}
 {% endblock %}

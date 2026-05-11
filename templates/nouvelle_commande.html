@@ -1,55 +1,155 @@
 {% extends 'base.html' %}
 {% block title %}Nouvelle Commande — StockETF{% endblock %}
-{% block page_title %}📋 Nouvelle commande{% endblock %}
+{% block page_title %}📋 Nouvelle commande fournisseur{% endblock %}
 {% block content %}
-<div class="page-header"><h2>Passer une commande fournisseur</h2><a href="{{ url_for('commandes') }}" class="btn btn-outline">← Retour</a></div>
-<div class="card">
-<form method="POST">
-  <div class="form-grid">
-    <div class="form-group"><label>Date *</label><input type="date" name="date_demande" value="{{ today }}" required></div>
-    <div class="form-group"><label>Article *</label>
-      <select name="article_id" id="art" required onchange="fillArticle()">
-        <option value="">-- Choisir --</option>
-        {% for a in articles %}
-        <option value="{{ a['id'] }}" data-four="{{ a['fournisseur'] }}" data-stock="{{ a['stock'] }}" data-min="{{ a['stock_min'] }}"
-          {% if a['stock'] <= a['stock_min'] %}style="color:#dc2626;font-weight:600"{% endif %}>
-          {{ a['id'] }} — {{ a['designation'] }}{% if a['stock'] <= a['stock_min'] %} ⚠️{% endif %} (stock: {{ a['stock'] }})
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group"><label>Quantité *</label><input type="number" name="quantite" required min="1" value="1"></div>
-    <div class="form-group"><label>Fournisseur</label>
-      <select name="fournisseur" id="four">
-        <option value="">-- Choisir --</option>
-        {% for f in fournisseurs %}<option value="{{ f['nom'] }}">{{ f['nom'] }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="form-group"><label>Prix unitaire (€)</label><input type="number" name="prix_unitaire" min="0" step="0.01" value="0"></div>
-    <div class="form-group" style="grid-column:1/-1"><label>Commentaire</label><textarea name="commentaire" placeholder="Ex: Rupture, stock critique, chantier urgent…"></textarea></div>
-  </div>
-  <div id="info" style="display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px;margin:12px 0;font-size:.83rem">
-    Stock actuel : <strong id="i-stock">—</strong> | Seuil min : <strong id="i-min">—</strong>
-  </div>
-  <div style="margin-top:14px;display:flex;gap:10px">
-    <button type="submit" class="btn btn-primary">📋 Créer la commande</button>
-    <a href="{{ url_for('commandes') }}" class="btn btn-outline">Annuler</a>
-  </div>
-</form>
+<div class="page-header">
+  <h2>Passer une commande avec plusieurs articles</h2>
+  <a href="{{ url_for('commandes') }}" class="btn btn-outline">← Retour</a>
 </div>
+
+<form method="POST" id="form-cmd">
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="card">
+    <div class="card-title">📋 En-tête de la commande</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date *</label><input type="date" name="date_demande" value="{{ today }}" required></div>
+      <div class="form-group"><label>Fournisseur *</label>
+        <select name="fournisseur" id="fournisseur-global" required>
+          <option value="">-- Choisir --</option>
+          {% for f in fournisseurs %}<option value="{{ f['nom'] }}">{{ f['nom'] }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Livraison prévue</label><input type="date" name="livraison_prevue"></div>
+      <div class="form-group"><label>Commentaire</label><input type="text" name="commentaire" placeholder="Motif, urgence…"></div>
+    </div>
+  </div>
+  <div class="card" style="align-self:start">
+    <div class="card-title">📊 Résumé</div>
+    <div style="font-size:.85rem;color:#555;line-height:2.2">
+      <div>Lignes : <strong id="nb-lignes">1</strong></div>
+      <div>Montant total : <strong id="montant-total" style="color:#E8661A;font-size:1.1rem">0,00 €</strong></div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;margin-top:14px">
+      📋 Créer la commande
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title" style="justify-content:space-between">
+    <span>🗄️ Articles à commander</span>
+    <button type="button" onclick="ajouterLigne()" class="btn btn-primary btn-sm">➕ Ajouter un article</button>
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th style="min-width:320px">Article *</th><th>Quantité</th><th>Prix unit. (€)</th><th>Montant</th><th>Stock actuel</th><th></th></tr>
+    </thead>
+    <tbody id="lignes-body">
+      <tr id="ligne-1" class="ligne-row">
+        <td style="font-weight:700;color:#E8661A;width:30px">1</td>
+        <td>
+          <select name="article_id[]" class="art-select" onchange="updateLigne(this)" style="width:100%;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:.78rem">
+            <option value="">-- Choisir un article --</option>
+            {% for a in articles %}
+            <option value="{{ a['id'] }}" data-stock="{{ a['stock'] }}" data-prix="{{ a['prix_achat'] }}" data-four="{{ a['fournisseur'] }}"
+              {% if a['stock'] <= a['stock_min'] %}style="color:#dc2626;font-weight:600"{% endif %}>
+              {{ a['id'] }} — {{ a['designation'] }} (stock: {{ a['stock'] }}){% if a['stock'] <= a['stock_min'] %} ⚠️{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </td>
+        <td><input type="number" name="quantite[]" class="qte-input" value="1" min="1" style="width:75px;padding:6px;border:1px solid #e0e0e0;border-radius:6px;font-size:.82rem" onchange="recalc(this)"></td>
+        <td><input type="number" name="prix_unitaire[]" class="prix-input" value="0" min="0" step="0.01" style="width:95px;padding:6px;border:1px solid #e0e0e0;border-radius:6px;font-size:.82rem" onchange="recalc(this)"></td>
+        <td class="montant-cell" style="font-weight:700;color:#E8661A;white-space:nowrap">0,00 €</td>
+        <td class="stock-cell" style="font-size:.78rem;color:#888;white-space:nowrap">—</td>
+        <td><button type="button" onclick="supprimerLigne('ligne-1')" class="btn btn-danger btn-sm">✕</button></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div style="margin-top:12px;background:#fff8f0;border-radius:8px;padding:10px;font-size:.8rem;color:#8a4500">
+    💡 Articles en rouge = rupture ou stock critique. Le fournisseur est pré-rempli automatiquement selon l'article.
+  </div>
+</div>
+</form>
+
 <script>
-function fillArticle() {
-  var sel = document.getElementById('art');
-  var opt = sel.options[sel.selectedIndex];
-  if (!sel.value) { document.getElementById('info').style.display='none'; return; }
-  var four = opt.getAttribute('data-four');
-  if (four) {
-    var fs = document.getElementById('four');
-    for (var i=0;i<fs.options.length;i++) { if(fs.options[i].value===four){fs.selectedIndex=i;break;} }
+var ligneCount = 1;
+var artData = { {% for a in articles %}"{{ a['id'] }}":{s:{{ a['stock'] }},p:{{ a['prix_achat'] }},f:"{{ a['fournisseur'] }}"},{% endfor %} };
+
+function getOptions() {
+  var opts = '<option value="">-- Choisir --</option>';
+  {% for a in articles %}
+  opts += '<option value="{{ a['id'] }}" data-stock="{{ a['stock'] }}" data-prix="{{ a['prix_achat'] }}" data-four="{{ a['fournisseur'] }}"{% if a['stock'] <= a['stock_min'] %} style="color:#dc2626;font-weight:600"{% endif %}>{{ a['id'] }} — {{ a['designation'] }} (stock: {{ a['stock'] }}){% if a['stock'] <= a['stock_min'] %} ⚠️{% endif %}</option>';
+  {% endfor %}
+  return opts;
+}
+
+function ajouterLigne() {
+  ligneCount++;
+  var tr = document.createElement('tr');
+  tr.id = 'ligne-' + ligneCount;
+  tr.className = 'ligne-row';
+  tr.style.borderBottom = '1px solid #e8e8e8';
+  tr.innerHTML =
+    '<td style="font-weight:700;color:#E8661A;width:30px">' + ligneCount + '</td>' +
+    '<td><select name="article_id[]" class="art-select" onchange="updateLigne(this)" style="width:100%;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:.78rem">' + getOptions() + '</select></td>' +
+    '<td><input type="number" name="quantite[]" class="qte-input" value="1" min="1" style="width:75px;padding:6px;border:1px solid #e0e0e0;border-radius:6px;font-size:.82rem" onchange="recalc(this)"></td>' +
+    '<td><input type="number" name="prix_unitaire[]" class="prix-input" value="0" min="0" step="0.01" style="width:95px;padding:6px;border:1px solid #e0e0e0;border-radius:6px;font-size:.82rem" onchange="recalc(this)"></td>' +
+    '<td class="montant-cell" style="font-weight:700;color:#E8661A;white-space:nowrap">0,00 €</td>' +
+    '<td class="stock-cell" style="font-size:.78rem;color:#888;white-space:nowrap">—</td>' +
+    '<td><button type="button" onclick="supprimerLigne(\'ligne-' + ligneCount + '\')" class="btn btn-danger btn-sm">✕</button></td>';
+  document.getElementById('lignes-body').appendChild(tr);
+  updateResume();
+}
+
+function supprimerLigne(id) {
+  if (document.querySelectorAll('.ligne-row').length <= 1) {
+    alert('Gardez au moins un article !'); return;
   }
-  document.getElementById('i-stock').textContent = opt.getAttribute('data-stock');
-  document.getElementById('i-min').textContent = opt.getAttribute('data-min');
-  document.getElementById('info').style.display='block';
+  document.getElementById(id).remove();
+  updateResume();
+}
+
+function updateLigne(sel) {
+  var row = sel.closest('tr');
+  var val = sel.value;
+  var stockCell = row.querySelector('.stock-cell');
+  var prixInput = row.querySelector('.prix-input');
+  if (!val) { stockCell.textContent = '—'; return; }
+  var d = artData[val];
+  if (d) {
+    stockCell.innerHTML = '<strong style="color:' + (d.s==0?'#dc2626':d.s<5?'#d97706':'#16a34a') + '">' + d.s + '</strong>';
+    if (d.p > 0) prixInput.value = d.p;
+    if (d.f) {
+      var fs = document.getElementById('fournisseur-global');
+      if (!fs.value) {
+        for (var i=0;i<fs.options.length;i++) {
+          if (fs.options[i].value===d.f) { fs.selectedIndex=i; break; }
+        }
+      }
+    }
+  }
+  recalc(row.querySelector('.qte-input'));
+}
+
+function recalc(el) {
+  var row = el.closest('tr');
+  var q = parseFloat(row.querySelector('.qte-input').value)||0;
+  var p = parseFloat(row.querySelector('.prix-input').value)||0;
+  row.querySelector('.montant-cell').textContent = (q*p).toFixed(2).replace('.',',')+' €';
+  updateResume();
+}
+
+function updateResume() {
+  var rows = document.querySelectorAll('.ligne-row');
+  var total = 0;
+  rows.forEach(function(r) {
+    total += (parseFloat(r.querySelector('.qte-input').value)||0) * (parseFloat(r.querySelector('.prix-input').value)||0);
+  });
+  document.getElementById('nb-lignes').textContent = rows.length;
+  document.getElementById('montant-total').textContent = total.toFixed(2).replace('.',',')+' €';
 }
 </script>
 {% endblock %}

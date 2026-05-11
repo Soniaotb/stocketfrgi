@@ -95,11 +95,16 @@ def init_db():
     );
     CREATE TABLE IF NOT EXISTS commandes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT UNIQUE NOT NULL,
-        date_demande TEXT NOT NULL, article_id TEXT NOT NULL, quantite INTEGER NOT NULL,
-        fournisseur TEXT DEFAULT '', prix_unitaire REAL DEFAULT 0, statut TEXT DEFAULT 'EN ATTENTE',
-        date_commande TEXT DEFAULT '', livraison_prevue TEXT DEFAULT '',
-        date_reception TEXT DEFAULT '', commentaire TEXT DEFAULT '',
-        created_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        date_demande TEXT NOT NULL, fournisseur TEXT DEFAULT '',
+        statut TEXT DEFAULT 'EN ATTENTE', date_commande TEXT DEFAULT '',
+        livraison_prevue TEXT DEFAULT '', date_reception TEXT DEFAULT '',
+        commentaire TEXT DEFAULT '', created_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS commande_lignes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        commande_id INTEGER NOT NULL, article_id TEXT NOT NULL,
+        quantite INTEGER NOT NULL, prix_unitaire REAL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS transferts (
         id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT UNIQUE NOT NULL,
@@ -393,20 +398,26 @@ def init_db():
 
     # Commandes
     cmds = [
-        ('CMD-001','2025-03-01','ART-122',20,'Bossard',14.0,'RECEPTIONNEE','2025-03-01','2025-03-05','2025-03-08','OK'),
-        ('CMD-002','2025-03-10','ART-091',10,'KF',18.0,'EN COURS','2025-03-10','2025-03-20','','En transit'),
-        ('CMD-003','2025-03-12','ART-013',5,'Opsial',12.0,'VALIDEE','2025-03-12','2025-03-25','','Urgent'),
-        ('CMD-004','2025-03-14','ART-003',10,'Wurth',3.2,'EN ATTENTE','','','',''),
-        ('CMD-005','2025-03-15','ART-139',5,'Hilti',89.0,'EN ATTENTE','','','','Stock critique'),
-        ('CMD-006','2025-03-15','ART-021',10,'',28.0,'EN ATTENTE','','','','Rupture'),
-        ('CMD-007','2025-03-16','ART-090',5,'',22.0,'EN ATTENTE','','','','Rupture'),
-        ('CMD-008','2025-03-16','ART-128',20,'Bossard',8.0,'EN ATTENTE','','','','Rupture'),
+        ('CMD-001','2025-03-01','Bossard','RECEPTIONNEE','2025-03-01','2025-03-05','2025-03-08','Boulons rail'),
+        ('CMD-002','2025-03-10','KF Lubricants','EN COURS','2025-03-10','2025-03-20','','En transit'),
+        ('CMD-003','2025-03-12','Opsial','VALIDEE','2025-03-12','2025-03-25','','Urgent'),
+        ('CMD-004','2025-03-14','Wurth France SAS','EN ATTENTE','','','',''),
+        ('CMD-005','2025-03-15','Hilti France','EN ATTENTE','','','','Stock critique'),
     ]
     for cmd in cmds:
         c.execute("""INSERT OR IGNORE INTO commandes
-            (numero,date_demande,article_id,quantite,fournisseur,prix_unitaire,statut,
-             date_commande,livraison_prevue,date_reception,commentaire)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)""", cmd)
+            (numero,date_demande,fournisseur,statut,date_commande,livraison_prevue,date_reception,commentaire)
+            VALUES (?,?,?,?,?,?,?,?)""", cmd)
+    # Lignes des commandes de démonstration
+    cmd_lignes = [
+        (1,'ART-122',20,14.0),(1,'ART-124',50,8.0),
+        (2,'ART-091',10,18.0),(2,'ART-092',5,12.0),
+        (3,'ART-013',5,12.0),
+        (4,'ART-003',10,3.2),(4,'ART-004',10,3.2),
+        (5,'ART-139',5,89.0),(5,'ART-021',10,28.0),
+    ]
+    for cl in cmd_lignes:
+        c.execute("INSERT OR IGNORE INTO commande_lignes (commande_id,article_id,quantite,prix_unitaire) VALUES (?,?,?,?)", cl)
 
     conn.commit()
     conn.close()
@@ -948,12 +959,17 @@ def nouveau_bon_reception():
 def commandes():
     conn = get_db()
     statut = request.args.get('statut','')
-    sql = """SELECT c.*, a.designation, a.unite FROM commandes c
-             LEFT JOIN articles a ON c.article_id=a.id"""
+    sql = "SELECT * FROM commandes"
     params = []
-    if statut: sql += " WHERE c.statut=?"; params.append(statut)
-    sql += " ORDER BY c.id DESC"
-    cmds = conn.execute(sql,params).fetchall()
+    if statut: sql += " WHERE statut=?"; params.append(statut)
+    sql += " ORDER BY id DESC"
+    cmds_raw = conn.execute(sql, params).fetchall()
+    cmds = []
+    for c in cmds_raw:
+        lignes = conn.execute("""SELECT cl.*, a.designation, a.unite FROM commande_lignes cl
+            LEFT JOIN articles a ON cl.article_id=a.id WHERE cl.commande_id=?""",(c['id'],)).fetchall()
+        montant = sum(l['quantite']*l['prix_unitaire'] for l in lignes)
+        cmds.append({'cmd':c,'lignes':lignes,'montant':montant,'nb':len(lignes)})
     conn.close()
     return render_template('commandes.html', cmds=cmds, statut_sel=statut)
 
@@ -964,18 +980,33 @@ def nouvelle_commande():
         numero = get_next_numero('commandes','numero','CMD-')
         conn = get_db()
         conn.execute("""INSERT INTO commandes
-            (numero,date_demande,article_id,quantite,fournisseur,prix_unitaire,statut,commentaire,created_by)
-            VALUES (?,?,?,?,?,?,?,?,?)""",(
-            numero, request.form.get('date_demande',date.today().isoformat()),
-            request.form.get('article_id',''), int(request.form.get('quantite',0)),
-            request.form.get('fournisseur',''), float(request.form.get('prix_unitaire',0)),
-            'EN ATTENTE', request.form.get('commentaire',''), session.get('user_id'),
+            (numero,date_demande,fournisseur,statut,livraison_prevue,commentaire,created_by)
+            VALUES (?,?,?,?,?,?,?)""",(
+            numero,
+            request.form.get('date_demande',date.today().isoformat()),
+            request.form.get('fournisseur',''),
+            'EN ATTENTE',
+            request.form.get('livraison_prevue',''),
+            request.form.get('commentaire',''),
+            session.get('user_id'),
         ))
+        cmd_id = conn.execute("SELECT id FROM commandes WHERE numero=?",(numero,)).fetchone()['id']
+        # Lignes articles
+        articles_ids = request.form.getlist('article_id[]')
+        quantites = request.form.getlist('quantite[]')
+        prix = request.form.getlist('prix_unitaire[]')
+        for i, art_id in enumerate(articles_ids):
+            if art_id and art_id.strip():
+                conn.execute("INSERT INTO commande_lignes (commande_id,article_id,quantite,prix_unitaire) VALUES (?,?,?,?)",(
+                    cmd_id, art_id.strip(),
+                    int(quantites[i]) if i<len(quantites) and quantites[i] else 1,
+                    float(prix[i]) if i<len(prix) and prix[i] else 0,
+                ))
         conn.commit(); conn.close()
-        flash(f'Commande {numero} créée','success')
+        flash(f'Commande {numero} créée avec {len([a for a in articles_ids if a])} article(s)','success')
         return redirect(url_for('commandes'))
     conn = get_db()
-    articles = conn.execute("SELECT id,designation,stock,stock_min,fournisseur FROM articles WHERE actif=1 ORDER BY famille,designation").fetchall()
+    articles = conn.execute("SELECT id,designation,stock,stock_min,fournisseur,prix_achat FROM articles WHERE actif=1 ORDER BY famille,designation").fetchall()
     fournisseurs = conn.execute("SELECT nom FROM fournisseurs WHERE actif=1 ORDER BY nom").fetchall()
     conn.close()
     return render_template('nouvelle_commande.html', articles=articles, fournisseurs=fournisseurs, today=date.today().isoformat())
@@ -998,6 +1029,7 @@ def maj_statut_commande(id):
 @login_required
 def supprimer_commande(id):
     conn = get_db()
+    conn.execute("DELETE FROM commande_lignes WHERE commande_id=?",(id,))
     conn.execute("DELETE FROM commandes WHERE id=?",(id,))
     conn.commit(); conn.close()
     flash('Commande supprimée','success')
