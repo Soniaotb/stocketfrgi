@@ -31,7 +31,7 @@
 <div class="card">
 <div class="table-wrap">
 <table>
-  <thead><tr><th>ID</th><th>Famille</th><th>Désignation</th><th>Réf.</th><th>Container</th><th>Empl.</th><th>Unité</th><th>Prix</th><th>Stock</th><th>Min</th><th>Alerte</th><th>Valeur</th><th>État</th><th>Actions</th></tr></thead>
+  <thead><tr><th>ID</th><th>Famille</th><th>Désignation</th><th>Réf.</th><th>Marque</th><th>Fournisseur</th><th>Container</th><th>Unité</th><th>Prix</th><th>Stock</th><th>Min</th><th>État</th><th>Actions</th></tr></thead>
   <tbody>
   {% for a in articles %}
   {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
