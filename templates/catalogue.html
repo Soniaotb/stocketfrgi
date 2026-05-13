@@ -1,14 +1,19 @@
 {% extends 'base.html' %}
-{% block title %}Catalogue — StockETF{% endblock %}
+{% block title %}Catalogue — Gestion Stock ETF RGI{% endblock %}
 {% block page_title %}🗄️ Catalogue — {{ articles|length }} article(s){% endblock %}
 {% block content %}
 <div class="page-header">
   <h2>{{ articles|length }} article(s) affiché(s)</h2>
-  <div style="display:flex;gap:8px"><a href="{{ url_for('export_stock') }}" class="btn btn-outline">📊 Export CSV</a><a href="{{ url_for('ajouter_article') }}" class="btn btn-primary">➕ Ajouter</a></div>
+  <div style="display:flex;gap:8px">
+    <a href="{{ url_for('export_stock') }}" class="btn btn-outline">📊 Export CSV</a>
+    <a href="{{ url_for('ajouter_article') }}" class="btn btn-primary">➕ Ajouter</a>
+  </div>
 </div>
+
+<!-- Filtres -->
 <div class="card" style="margin-bottom:14px">
   <form method="GET" class="filters">
-    <input type="text" name="q" value="{{ q }}" placeholder="🔍 Recherche…" style="min-width:200px">
+    <input type="text" name="q" value="{{ q }}" placeholder="🔍 Recherche désignation, ref, marque…" style="min-width:220px">
     <select name="famille">
       <option value="">Toutes familles</option>
       {% for f in familles %}<option value="{{ f['famille'] }}" {% if famille_sel==f['famille'] %}selected{% endif %}>{{ f['famille'] }}</option>{% endfor %}
@@ -28,45 +33,98 @@
     <a href="{{ url_for('catalogue') }}" class="btn btn-outline">Reset</a>
   </form>
 </div>
+
+<!-- Tableau -->
 <div class="card">
 <div class="table-wrap">
 <table>
-  <thead><tr><th>ID</th><th>Famille</th><th>Désignation</th><th>Réf.</th><th>Marque</th><th>Fournisseur</th><th>Container</th><th>Unité</th><th>Prix</th><th>Stock</th><th>Min</th><th>État</th><th>Actions</th></tr></thead>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Famille</th>
+      <th>Désignation</th>
+      <th>Réf.</th>
+      <th>Marque</th>
+      <th>Fournisseur</th>
+      <th>Container</th>
+      <th>Étagère</th>
+      <th>Unité</th>
+      <th>Prix</th>
+      <th>Stock</th>
+      <th>Min</th>
+      <th>État</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
   <tbody>
   {% for a in articles %}
   {% set etat = get_etat(a['stock'],a['stock_min'],a['stock_alerte']) %}
   <tr>
+    <!-- ID -->
     <td><code style="font-size:.72rem;font-weight:700;color:#1a1a2e">{{ a['id'] }}</code></td>
+
+    <!-- Famille -->
     <td><span style="font-size:.68rem;background:#f0f2f5;padding:1px 6px;border-radius:10px">{{ a['famille'] }}</span></td>
+
+    <!-- Désignation + marque en dessous -->
     <td>
       <strong style="font-size:.8rem">{{ a['designation'] }}</strong>
-      {% if a['marque'] %}<br><span style="font-size:.68rem;color:#888">{{ a['marque'] }}</span>{% endif %}
       {% if a['observations'] %}<br><span style="font-size:.66rem;color:#E8661A">{{ a['observations'] }}</span>{% endif %}
     </td>
-    <td style="font-size:.72rem;color:#888">{{ a['reference'] or '—' }}</td>
-    <td><span style="font-weight:700;color:#E8661A;font-size:.78rem">{{ a['container_code'] or '?' }}</span></td>
-    <td style="font-size:.75rem">{{ a['emplacement'] }}</td>
+
+    <!-- Référence -->
+    <td style="font-size:.72rem;color:#888;max-width:120px">{{ a['reference'] or '—' }}</td>
+
+    <!-- Marque (séparée) -->
+    <td>
+      {% if a['marque'] %}
+      <span style="font-size:.75rem;font-weight:600;color:#555">{{ a['marque'] }}</span>
+      {% else %}<span style="color:#ddd;font-size:.72rem">—</span>{% endif %}
+    </td>
+
+    <!-- Fournisseur -->
+    <td>
+      {% if a['fournisseur'] %}
+      <span style="font-size:.72rem;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap">{{ a['fournisseur'] }}</span>
+      {% else %}<span style="color:#ddd;font-size:.72rem">—</span>{% endif %}
+    </td>
+
+    <!-- Container -->
+    <td><span style="font-weight:700;color:#E8661A;font-size:.8rem">{{ a['container_code'] or '?' }}</span></td>
+
+    <!-- Étagère / Emplacement -->
+    <td style="font-size:.75rem;color:#888">{{ a['emplacement'] or '—' }}</td>
+
+    <!-- Unité -->
     <td style="font-size:.72rem">{{ a['unite'] }}</td>
-    <td>{{ "%.2f"|format(a['prix_achat']) }}</td>
+
+    <!-- Prix -->
+    <td style="font-size:.8rem">{{ "%.2f"|format(a['prix_achat']) }} €</td>
+
+    <!-- Stock -->
     <td><span class="stock-num {{ etat|lower }}">{{ a['stock'] }}</span></td>
-    <td style="color:#aaa">{{ a['stock_min'] }}</td>
-    <td style="color:#aaa">{{ a['stock_alerte'] }}</td>
-    <td><strong>{{ "%.0f"|format(a['stock']*a['prix_achat']) }} €</strong></td>
+
+    <!-- Min -->
+    <td style="color:#aaa;font-size:.78rem">{{ a['stock_min'] }}</td>
+
+    <!-- État -->
     <td>
       {% if etat=='RUPTURE' %}<span class="badge badge-rupture">🔴</span>
       {% elif etat=='CRITIQUE' %}<span class="badge badge-critique">🟠</span>
       {% elif etat=='ALERTE' %}<span class="badge badge-alerte">🟡</span>
       {% else %}<span class="badge badge-ok">🟢</span>{% endif %}
     </td>
+
+    <!-- Actions -->
     <td style="white-space:nowrap">
       <a href="{{ url_for('modifier_article', id=a['id']) }}" class="btn btn-outline btn-sm">✏️</a>
-      <form method="POST" action="{{ url_for('supprimer_article', id=a['id']) }}" style="display:inline" onsubmit="return confirm('Archiver ?')">
+      <form method="POST" action="{{ url_for('supprimer_article', id=a['id']) }}" style="display:inline" onsubmit="return confirm('Archiver cet article ?')">
         <button type="submit" class="btn btn-danger btn-sm">🗑</button>
       </form>
     </td>
   </tr>
   {% else %}
-  <tr><td colspan="14" style="text-align:center;padding:30px;color:#888">Aucun article</td></tr>
+  <tr><td colspan="14" style="text-align:center;padding:30px;color:#888">Aucun article trouvé</td></tr>
   {% endfor %}
   </tbody>
 </table>
