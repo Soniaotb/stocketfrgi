@@ -1,16 +1,95 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-import sqlite3, os, hashlib
+import os, hashlib
 from datetime import datetime, date
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'stocketf2026CN')
-DATABASE = os.environ.get('DATABASE_PATH', 'stocketf.db')
+
+# ─── BASE DE DONNÉES — PostgreSQL (Supabase) ou SQLite (local) ────────────────
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+USE_POSTGRES = DATABASE_URL.startswith('postgresql') if DATABASE_URL else False
+
+import sqlite3
+
+if USE_POSTGRES:
+    import psycopg2
+    import psycopg2.extras
+
+def adapt_sql(sql):
+    """Convertit SQL SQLite en SQL PostgreSQL."""
+    sql = sql.replace('?', '%s')
+    sql = sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'BIGSERIAL PRIMARY KEY')
+    sql = sql.replace(' AUTOINCREMENT', '')
+    sql = sql.replace('TEXT DEFAULT CURRENT_TIMESTAMP', 'TEXT DEFAULT NOW()::TEXT')
+    sql = sql.replace('PRAGMA journal_mode=WAL', 'SELECT 1')
+    return sql
+
+class Connection:
+    """Connexion unifiée SQLite/PostgreSQL."""
+    def __init__(self):
+        if USE_POSTGRES:
+            self._conn = psycopg2.connect(DATABASE_URL, connect_timeout=10)
+            self._conn.autocommit = False
+            self._pg = True
+        else:
+            self._conn = sqlite3.connect(os.environ.get('DATABASE_PATH','stocketf.db'))
+            self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._pg = False
+    
+    def execute(self, sql, params=None):
+        if self._pg:
+            cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            try:
+                cur.execute(adapt_sql(sql), list(params) if params else None)
+            except Exception as e:
+                self._conn.rollback()
+                raise e
+            return PGResult(cur)
+        else:
+            if params:
+                return self._conn.execute(sql, params)
+            return self._conn.execute(sql)
+    
+    def cursor(self):
+        """Retourne self pour compatibilité avec le code qui utilise conn.cursor()."""
+        return self
+    
+    def executescript(self, script):
+        if self._pg:
+            cur = self._conn.cursor()
+            stmts = adapt_sql(script).split(';')
+            for stmt in stmts:
+                stmt = stmt.strip()
+                if stmt and not stmt.startswith('--'):
+                    try: cur.execute(stmt)
+                    except: self._conn.rollback()
+        else:
+            self._conn.executescript(script)
+    
+    def commit(self):
+        self._conn.commit()
+    
+    def close(self):
+        self._conn.close()
+
+class PGResult:
+    """Résultat PostgreSQL compatible avec l'interface SQLite."""
+    def __init__(self, cursor):
+        self._cur = cursor
+    def fetchone(self):
+        row = self._cur.fetchone()
+        return dict(row) if row else None
+    def fetchall(self):
+        rows = self._cur.fetchall()
+        return [dict(r) for r in rows]
+    def __iter__(self):
+        return iter(self.fetchall())
+    def __getitem__(self, key):
+        return self.fetchone()[key]
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return Connection()
 
 def hash_pw(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
