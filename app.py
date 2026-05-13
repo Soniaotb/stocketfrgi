@@ -19,9 +19,16 @@ def adapt_sql(sql):
     """Convertit SQL SQLite en SQL PostgreSQL."""
     sql = sql.replace('?', '%s')
     sql = sql.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'BIGSERIAL PRIMARY KEY')
+    sql = sql.replace('BIGSERIAL PRIMARY KEY AUTOINCREMENT', 'BIGSERIAL PRIMARY KEY')
     sql = sql.replace(' AUTOINCREMENT', '')
     sql = sql.replace('TEXT DEFAULT CURRENT_TIMESTAMP', 'TEXT DEFAULT NOW()::TEXT')
     sql = sql.replace('PRAGMA journal_mode=WAL', 'SELECT 1')
+    sql = sql.replace('INSERT INTO', 'INSERT INTO')
+    sql = sql.replace('INSERT INTO', 'INSERT INTO')
+    # Ajouter ON CONFLICT DO NOTHING pour les INSERT INTO avec OR IGNORE
+    if 'INSERT INTO' in sql and 'ON CONFLICT' not in sql and 'SELECT' not in sql:
+        sql = sql.rstrip().rstrip(';')
+        sql += ' ON CONFLICT DO NOTHING'
     return sql
 
 class Connection:
@@ -40,8 +47,12 @@ class Connection:
     def execute(self, sql, params=None):
         if self._pg:
             cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            sql_adapted = adapt_sql(sql)
+            # Ajouter ON CONFLICT DO NOTHING aux INSERT simples
+            if sql_adapted.strip().upper().startswith('INSERT INTO') and 'ON CONFLICT' not in sql_adapted.upper():
+                sql_adapted += ' ON CONFLICT DO NOTHING'
             try:
-                cur.execute(adapt_sql(sql), list(params) if params else None)
+                cur.execute(sql_adapted, list(params) if params else None)
             except Exception as e:
                 self._conn.rollback()
                 raise e
@@ -61,9 +72,15 @@ class Connection:
             stmts = adapt_sql(script).split(';')
             for stmt in stmts:
                 stmt = stmt.strip()
-                if stmt and not stmt.startswith('--'):
-                    try: cur.execute(stmt)
-                    except: self._conn.rollback()
+                if not stmt or stmt.startswith('--'): continue
+                # Ajouter ON CONFLICT DO NOTHING aux INSERT
+                if stmt.upper().startswith('INSERT INTO') and 'ON CONFLICT' not in stmt.upper():
+                    stmt += ' ON CONFLICT DO NOTHING'
+                try:
+                    cur.execute(stmt)
+                    self._conn.commit()
+                except Exception as e:
+                    self._conn.rollback()
         else:
             self._conn.executescript(script)
     
@@ -265,7 +282,7 @@ def init_db():
         ('Responsable','responsable@stocketf.com',hash_pw('resp2026'),'responsable'),
         ('Chantier','chantier@stocketf.com',hash_pw('chant2026'),'chef_chantier'),
     ]:
-        c.execute("INSERT OR IGNORE INTO utilisateurs (nom,email,password_hash,role) VALUES (?,?,?,?)", u)
+        c.execute("INSERT INTO utilisateurs (nom,email,password_hash,role) VALUES (?,?,?,?)", u)
 
     # Familles
     familles = [
@@ -287,7 +304,7 @@ def init_db():
         ('Gaz & Soudage','🔥','#ef4444'),
     ]
     for f in familles:
-        c.execute("INSERT OR IGNORE INTO familles (nom,icone,couleur) VALUES (?,?,?)", f)
+        c.execute("INSERT INTO familles (nom,icone,couleur) VALUES (?,?,?)", f)
 
     # Containers
     containers = [
@@ -299,7 +316,7 @@ def init_db():
         ('Zone Gaz — Plein Air','GAZ','C-006','Bouteilles gaz stockées en extérieur','Stockage plein air',0,'ACTIF'),
     ]
     for ct in containers:
-        c.execute("INSERT OR IGNORE INTO containers (nom,code,numero,description,emplacement,chantier_id,statut) VALUES (?,?,?,?,?,?,?)", ct)
+        c.execute("INSERT INTO containers (nom,code,numero,description,emplacement,chantier_id,statut) VALUES (?,?,?,?,?,?,?)", ct)
 
     # Chantiers
     chantiers = [
@@ -310,7 +327,7 @@ def init_db():
         ('Base arrière','CH-005','Dépôt principal','Admin','2025-01-01','2026-12-31','ACTIF',0),
     ]
     for ch in chantiers:
-        c.execute("INSERT OR IGNORE INTO chantiers (nom,code,adresse,chef,date_debut,date_fin,statut,budget) VALUES (?,?,?,?,?,?,?,?)", ch)
+        c.execute("INSERT INTO chantiers (nom,code,adresse,chef,date_debut,date_fin,statut,budget) VALUES (?,?,?,?,?,?,?,?)", ch)
 
     # 612 articles réels avec marque et fournisseur séparés
     articles = [
@@ -809,7 +826,7 @@ def init_db():
         ('ART-612','Gaz & Soudage','Bouteille Acétylène','','Air Liquide',6,'Zone Gaz','UNITE',1,0.0,'Air Liquide',30,3,8,40,'Stockage plein air')
     ]
     for a in articles:
-        c.execute("""INSERT OR IGNORE INTO articles
+        c.execute("""INSERT INTO articles
             (id,famille,designation,reference,marque,container_id,emplacement,unite,colisage,
              prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,observations)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", a)
@@ -852,7 +869,7 @@ def init_db():
         ('F-034','OPS','','','','',7,'30j net','Securite, EPI',''),
     ]
     for f in fournisseurs:
-        c.execute("""INSERT OR IGNORE INTO fournisseurs
+        c.execute("""INSERT INTO fournisseurs
             (id,nom,contact,telephone,email,adresse,delai,conditions,articles_fournis,commentaires)
             VALUES (?,?,?,?,?,?,?,?,?,?)""", f)
 
@@ -866,7 +883,7 @@ def init_db():
         ('BS-006','2025-03-10','Martin J.',3,'Entretien et meulage'),
     ]
     for bs in bons_s:
-        c.execute("""INSERT OR IGNORE INTO bons_sortie
+        c.execute("""INSERT INTO bons_sortie
             (numero,date_sortie,demandeur,chantier_id,commentaire)
             VALUES (?,?,?,?,?)""", bs)
     # Lignes bons de sortie
@@ -879,7 +896,7 @@ def init_db():
         (6,'ART-091',2),(6,'ART-086',5),
     ]
     for bl in bs_lignes:
-        c.execute("INSERT OR IGNORE INTO bons_sortie_lignes (bon_id,article_id,quantite) VALUES (?,?,?)", bl)
+        c.execute("INSERT INTO bons_sortie_lignes (bon_id,article_id,quantite) VALUES (?,?,?)", bl)
 
     # Bons reception
     bons_r = [
@@ -893,7 +910,7 @@ def init_db():
         ('BR-008','2025-03-12','Opsial','BL-OPS-001','ART-013',20,17,12.0,'OK'),
     ]
     for br in bons_r:
-        c.execute("""INSERT OR IGNORE INTO bons_reception
+        c.execute("""INSERT INTO bons_reception
             (numero,date_reception,fournisseur,num_bl,article_id,qte_commandee,qte_recue,prix_unitaire,commentaire)
             VALUES (?,?,?,?,?,?,?,?,?)""", br)
 
@@ -906,7 +923,7 @@ def init_db():
         ('CMD-005','2025-03-15','Hilti France','EN ATTENTE','','','','Stock critique'),
     ]
     for cmd in cmds:
-        c.execute("""INSERT OR IGNORE INTO commandes
+        c.execute("""INSERT INTO commandes
             (numero,date_demande,fournisseur,statut,date_commande,livraison_prevue,date_reception,commentaire)
             VALUES (?,?,?,?,?,?,?,?)""", cmd)
     # Lignes des commandes de démonstration
@@ -918,7 +935,7 @@ def init_db():
         (5,'ART-139',5,89.0),(5,'ART-021',10,28.0),
     ]
     for cl in cmd_lignes:
-        c.execute("INSERT OR IGNORE INTO commande_lignes (commande_id,article_id,quantite,prix_unitaire) VALUES (?,?,?,?)", cl)
+        c.execute("INSERT INTO commande_lignes (commande_id,article_id,quantite,prix_unitaire) VALUES (?,?,?,?)", cl)
 
     conn.commit()
     conn.close()
