@@ -90,20 +90,30 @@ class Connection:
     def close(self):
         self._conn.close()
 
+class PGRow(dict):
+    """Ligne PostgreSQL accessible par nom ET par index."""
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
 class PGResult:
     """Résultat PostgreSQL compatible avec l'interface SQLite."""
     def __init__(self, cursor):
         self._cur = cursor
+        self._rows = None
     def fetchone(self):
         row = self._cur.fetchone()
-        return dict(row) if row else None
+        return PGRow(row) if row else None
     def fetchall(self):
         rows = self._cur.fetchall()
-        return [dict(r) for r in rows]
+        return [PGRow(r) for r in rows]
     def __iter__(self):
         return iter(self.fetchall())
     def __getitem__(self, key):
-        return self.fetchone()[key]
+        row = self.fetchone()
+        if row is None: return None
+        return row[key]
 
 def get_db():
     return Connection()
