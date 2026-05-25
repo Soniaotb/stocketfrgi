@@ -36,13 +36,23 @@
         <span style="font-size:.78rem;font-weight:700;color:#555">{{ row.nb }} article(s)</span>
         <span style="margin-left:8px;font-size:.9rem;font-weight:800;color:#E8661A">{{ "%.2f"|format(row.montant) }} €</span>
       </div>
-      {% if row.cmd['delai_jours'] and row.cmd['delai_jours'] > 0 %}
+      {% if row.cmd['livraison_prevue'] %}
       <div style="font-size:.78rem;font-weight:700;background:#f0f9ff;color:#0369a1;padding:3px 10px;border-radius:20px">
-        ⏱️ Délai : {{ row.cmd['delai_jours'] }} jour(s)
-        {% if row.cmd['livraison_prevue'] %}— Livraison le {{ row.cmd['livraison_prevue'] }}{% endif %}
+        📅 Livraison prévue : {{ row.cmd['livraison_prevue'] }}
+        {% set d1 = row.cmd['date_demande'] %}
+        {% set d2 = row.cmd['livraison_prevue'] %}
+        {% if d1 and d2 and d1 < d2 %}
+        — <span id="delai-{{ row.cmd['id'] }}">⏱️ calcul en cours</span>
+        <script>
+        (function(){
+          var d1=new Date("{{ row.cmd['date_demande'] }}");
+          var d2=new Date("{{ row.cmd['livraison_prevue'] }}");
+          var diff=Math.round((d2-d1)/(1000*60*60*24));
+          document.getElementById('delai-{{ row.cmd['id'] }}').textContent='⏱️ '+diff+' jour(s)';
+        })();
+        </script>
+        {% endif %}
       </div>
-      {% elif row.cmd['livraison_prevue'] %}
-      <div style="font-size:.78rem;color:#888">📅 Livraison prévue : {{ row.cmd['livraison_prevue'] }}</div>
       {% endif %}
       {% if row.cmd['commentaire'] %}
       <div style="font-size:.75rem;color:#888;font-style:italic">💬 {{ row.cmd['commentaire'] }}</div>
