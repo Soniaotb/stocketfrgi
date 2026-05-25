@@ -247,8 +247,8 @@ def init_db():
         date_demande TEXT NOT NULL, fournisseur TEXT DEFAULT '',
         statut TEXT DEFAULT 'EN ATTENTE', date_commande TEXT DEFAULT '',
         livraison_prevue TEXT DEFAULT '', date_reception TEXT DEFAULT '',
-        commentaire TEXT DEFAULT '', created_by INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        delai_jours INTEGER DEFAULT 0, commentaire TEXT DEFAULT '',
+        created_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS commande_lignes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1540,14 +1540,22 @@ def nouvelle_commande():
     if request.method == 'POST':
         numero = get_next_numero('commandes','numero','CMD-')
         conn = get_db()
+        date_dem = request.form.get('date_demande', date.today().isoformat())
+        livraison = request.form.get('livraison_prevue','')
+        delai_jours = 0
+        if livraison and date_dem:
+            try:
+                from datetime import datetime as dt2
+                d1 = dt2.strptime(date_dem, '%Y-%m-%d')
+                d2 = dt2.strptime(livraison, '%Y-%m-%d')
+                delai_jours = max(0, (d2 - d1).days)
+            except: pass
         conn.execute("""INSERT INTO commandes
-            (numero,date_demande,fournisseur,statut,livraison_prevue,commentaire,created_by)
-            VALUES (?,?,?,?,?,?,?)""",(
-            numero,
-            request.form.get('date_demande',date.today().isoformat()),
+            (numero,date_demande,fournisseur,statut,livraison_prevue,delai_jours,commentaire,created_by)
+            VALUES (?,?,?,?,?,?,?,?)""",(
+            numero, date_dem,
             request.form.get('fournisseur',''),
-            'EN ATTENTE',
-            request.form.get('livraison_prevue',''),
+            'EN ATTENTE', livraison, delai_jours,
             request.form.get('commentaire',''),
             session.get('user_id'),
         ))
@@ -2086,14 +2094,16 @@ def api_recherche_articles():
     if len(q) < 2:
         return jsonify([])
     conn = get_db()
+    q_lower = q.lower()
     articles = conn.execute("""
         SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
         FROM articles a LEFT JOIN containers c ON a.container_id=c.id
         WHERE a.actif=1 AND (
-            a.designation LIKE ? OR a.id LIKE ? OR 
-            a.reference LIKE ? OR a.marque LIKE ? OR a.famille LIKE ?
+            LOWER(a.designation) LIKE ? OR LOWER(a.id) LIKE ? OR 
+            LOWER(a.reference) LIKE ? OR LOWER(a.marque) LIKE ? OR 
+            LOWER(a.famille) LIKE ? OR LOWER(a.fournisseur) LIKE ?
         ) ORDER BY a.designation LIMIT 15
-    """, [f'%{q}%']*5).fetchall()
+    """, [f'%{q_lower}%']*6).fetchall()
     conn.close()
     result = []
     for a in articles:

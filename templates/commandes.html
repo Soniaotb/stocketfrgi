@@ -36,8 +36,16 @@
         <span style="font-size:.78rem;font-weight:700;color:#555">{{ row.nb }} article(s)</span>
         <span style="margin-left:8px;font-size:.9rem;font-weight:800;color:#E8661A">{{ "%.2f"|format(row.montant) }} €</span>
       </div>
+      {% if row.cmd['delai_jours'] and row.cmd['delai_jours'] > 0 %}
+      <div style="font-size:.78rem;font-weight:700;background:#f0f9ff;color:#0369a1;padding:3px 10px;border-radius:20px">
+        ⏱️ Délai : {{ row.cmd['delai_jours'] }} jour(s)
+        {% if row.cmd['livraison_prevue'] %}— Livraison le {{ row.cmd['livraison_prevue'] }}{% endif %}
+      </div>
+      {% elif row.cmd['livraison_prevue'] %}
+      <div style="font-size:.78rem;color:#888">📅 Livraison prévue : {{ row.cmd['livraison_prevue'] }}</div>
+      {% endif %}
       {% if row.cmd['commentaire'] %}
-      <div style="font-size:.75rem;color:#888;font-style:italic">{{ row.cmd['commentaire'] }}</div>
+      <div style="font-size:.75rem;color:#888;font-style:italic">💬 {{ row.cmd['commentaire'] }}</div>
       {% endif %}
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
