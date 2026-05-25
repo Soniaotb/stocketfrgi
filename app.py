@@ -247,8 +247,8 @@ def init_db():
         date_demande TEXT NOT NULL, fournisseur TEXT DEFAULT '',
         statut TEXT DEFAULT 'EN ATTENTE', date_commande TEXT DEFAULT '',
         livraison_prevue TEXT DEFAULT '', date_reception TEXT DEFAULT '',
-        delai_jours INTEGER DEFAULT 0, commentaire TEXT DEFAULT '',
-        created_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        commentaire TEXT DEFAULT '', created_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS commande_lignes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1551,11 +1551,11 @@ def nouvelle_commande():
                 delai_jours = max(0, (d2 - d1).days)
             except: pass
         conn.execute("""INSERT INTO commandes
-            (numero,date_demande,fournisseur,statut,livraison_prevue,delai_jours,commentaire,created_by)
-            VALUES (?,?,?,?,?,?,?,?)""",(
+            (numero,date_demande,fournisseur,statut,livraison_prevue,commentaire,created_by)
+            VALUES (?,?,?,?,?,?,?)""",(
             numero, date_dem,
             request.form.get('fournisseur',''),
-            'EN ATTENTE', livraison, delai_jours,
+            'EN ATTENTE', livraison,
             request.form.get('commentaire',''),
             session.get('user_id'),
         ))
