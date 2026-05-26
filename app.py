@@ -1314,8 +1314,8 @@ def ajouter_article():
         new_id = f"ART-{n:03d}"
         conn.execute("""INSERT INTO articles
             (id,famille,designation,reference,marque,container_id,emplacement,unite,colisage,
-             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,observations)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(
+             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,delai_livraison,observations)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(
             new_id, request.form.get('famille',''), request.form.get('designation',''),
             request.form.get('reference',''), request.form.get('marque',''),
             int(request.form.get('container_id',1)), request.form.get('emplacement',''),
@@ -1323,6 +1323,7 @@ def ajouter_article():
             float(request.form.get('prix_achat',0)), request.form.get('fournisseur',''),
             int(request.form.get('stock',0)), int(request.form.get('stock_min',0)),
             int(request.form.get('stock_alerte',0)), int(request.form.get('stock_max',0)),
+            int(request.form.get('delai_livraison',0)),
             request.form.get('observations',''),
         ))
         conn.commit(); conn.close()
@@ -1346,14 +1347,15 @@ def modifier_article(id):
     if request.method == 'POST':
         conn.execute("""UPDATE articles SET famille=?,designation=?,reference=?,marque=?,
             container_id=?,emplacement=?,unite=?,colisage=?,prix_achat=?,fournisseur=?,
-            stock_min=?,stock_alerte=?,stock_max=?,observations=? WHERE id=?""",(
+            stock_min=?,stock_alerte=?,stock_max=?,delai_livraison=?,observations=? WHERE id=?""",(
             request.form.get('famille',''), request.form.get('designation',''),
             request.form.get('reference',''), request.form.get('marque',''),
             int(request.form.get('container_id',1)), request.form.get('emplacement',''),
             request.form.get('unite','UNITE'), int(request.form.get('colisage',1)),
             float(request.form.get('prix_achat',0)), request.form.get('fournisseur',''),
             int(request.form.get('stock_min',0)), int(request.form.get('stock_alerte',0)),
-            int(request.form.get('stock_max',0)), request.form.get('observations',''), id,
+            int(request.form.get('stock_max',0)), int(request.form.get('delai_livraison',0)),
+            request.form.get('observations',''), id,
         ))
         conn.commit(); conn.close()
         flash('Article modifié','success')
