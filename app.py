@@ -2122,15 +2122,25 @@ def api_recherche_articles():
         return jsonify([])
     conn = get_db()
     q_lower = q.lower()
-    articles = conn.execute("""
-        SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
-        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
-        WHERE a.actif=1 AND (
-            LOWER(a.designation) LIKE ? OR LOWER(a.id) LIKE ? OR 
-            LOWER(a.reference) LIKE ? OR LOWER(a.marque) LIKE ? OR 
-            LOWER(a.famille) LIKE ? OR LOWER(a.fournisseur) LIKE ?
-        ) ORDER BY a.designation LIMIT 15
-    """, [f'%{q_lower}%']*6).fetchall()
+    if USE_POSTGRES:
+        search_sql = """
+            SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
+            FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+            WHERE a.actif=1 AND (
+                a.designation ILIKE ? OR a.id ILIKE ? OR
+                a.reference ILIKE ? OR a.marque ILIKE ? OR
+                a.famille ILIKE ? OR a.fournisseur ILIKE ?
+            ) ORDER BY a.designation LIMIT 15"""
+    else:
+        search_sql = """
+            SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
+            FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+            WHERE a.actif=1 AND (
+                LOWER(a.designation) LIKE ? OR LOWER(a.id) LIKE ? OR
+                LOWER(a.reference) LIKE ? OR LOWER(a.marque) LIKE ? OR
+                LOWER(a.famille) LIKE ? OR LOWER(a.fournisseur) LIKE ?
+            ) ORDER BY a.designation LIMIT 15"""
+    articles = conn.execute(search_sql, [f'%{q_lower}%']*6).fetchall()
     conn.close()
     result = []
     for a in articles:
