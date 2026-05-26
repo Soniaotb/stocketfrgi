@@ -1680,40 +1680,65 @@ def mouvements():
 @login_required
 def analytics():
     conn = get_db()
-    articles = conn.execute("SELECT * FROM articles WHERE actif=1").fetchall()
-    valeur_totale = sum(a['stock']*a['prix_achat'] for a in articles)
-    total = len(articles)
-    ruptures = sum(1 for a in articles if a['stock']==0)
-    critiques = sum(1 for a in articles if 0<a['stock']<=a['stock_min'])
-    alertes = sum(1 for a in articles if a['stock_min']<a['stock']<=a['stock_alerte'])
-    familles_stats = {}
-    for a in articles:
-        f = a['famille']
-        if f not in familles_stats:
-            familles_stats[f] = {'nb':0,'valeur':0,'ruptures':0,'alertes':0}
-        familles_stats[f]['nb'] += 1
-        familles_stats[f]['valeur'] += a['stock']*a['prix_achat']
-        etat = get_etat_stock(a['stock'],a['stock_min'],a['stock_alerte'])
-        if etat == 'RUPTURE': familles_stats[f]['ruptures'] += 1
-        elif etat in ('CRITIQUE','ALERTE'): familles_stats[f]['alertes'] += 1
-    familles_list = sorted(familles_stats.items(), key=lambda x:x[1]['valeur'], reverse=True)
-    top_sorties = conn.execute("""SELECT bsl.article_id, a.designation, SUM(bsl.quantite) as total_sorti,
-        a.unite, MAX(bs.date_sortie) as derniere_sortie
-        FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
-        LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id
-        GROUP BY bsl.article_id ORDER BY total_sorti DESC LIMIT 10""").fetchall()
-    urgents = sorted([a for a in articles if a['stock']<=a['stock_min']], key=lambda x:x['stock'])
-    mois = date.today().strftime('%Y-%m')
-    nb_sorties_mois = conn.execute("SELECT COUNT(DISTINCT bon_id) FROM bons_sortie_lignes bsl LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id WHERE bs.date_sortie LIKE ?",(f'{mois}%',)).fetchone()[0]
-    nb_receptions_mois = conn.execute("SELECT COUNT(*) FROM bons_reception WHERE date_reception LIKE ?",(f'{mois}%',)).fetchone()[0]
-    # Stats par chantier
-    chantier_stats = conn.execute("""SELECT ch.nom, COUNT(DISTINCT bs.id) as nb_sorties,
-        SUM(bsl.quantite * a.prix_achat) as cout
-        FROM bons_sortie bs
-        LEFT JOIN bons_sortie_lignes bsl ON bsl.bon_id=bs.id
-        LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
-        LEFT JOIN articles a ON bsl.article_id=a.id
-        GROUP BY bs.chantier_id ORDER BY cout DESC""").fetchall()
+    try:
+        articles = conn.execute("SELECT * FROM articles WHERE actif=1").fetchall()
+        valeur_totale = sum((a['stock'] or 0)*(a['prix_achat'] or 0) for a in articles)
+        total = len(articles)
+        ruptures = sum(1 for a in articles if (a['stock'] or 0)==0)
+        critiques = sum(1 for a in articles if 0<(a['stock'] or 0)<=(a['stock_min'] or 0))
+        alertes = sum(1 for a in articles if (a['stock_min'] or 0)<(a['stock'] or 0)<=(a['stock_alerte'] or 0))
+        
+        familles_stats = {}
+        for a in articles:
+            f = a['famille'] or 'Divers'
+            if f not in familles_stats:
+                familles_stats[f] = {'nb':0,'valeur':0,'ruptures':0,'alertes':0}
+            familles_stats[f]['nb'] += 1
+            familles_stats[f]['valeur'] += (a['stock'] or 0)*(a['prix_achat'] or 0)
+            etat = get_etat_stock(a['stock'] or 0, a['stock_min'] or 0, a['stock_alerte'] or 0)
+            if etat == 'RUPTURE': familles_stats[f]['ruptures'] += 1
+            elif etat in ('CRITIQUE','ALERTE'): familles_stats[f]['alertes'] += 1
+        familles_list = sorted(familles_stats.items(), key=lambda x:x[1]['valeur'], reverse=True)
+        
+        try:
+            top_sorties = conn.execute("""SELECT bsl.article_id, a.designation,
+                SUM(bsl.quantite) as total_sorti, a.unite, MAX(bs.date_sortie) as derniere_sortie
+                FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
+                LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id
+                GROUP BY bsl.article_id, a.designation, a.unite
+                ORDER BY total_sorti DESC LIMIT 10""").fetchall()
+        except: top_sorties = []
+        
+        urgents = sorted([a for a in articles if (a['stock'] or 0)<=(a['stock_min'] or 0)],
+                        key=lambda x: x['stock'] or 0)
+        
+        mois = date.today().strftime('%Y-%m')
+        try:
+            nb_sorties_mois = conn.execute(
+                "SELECT COUNT(DISTINCT bs.id) FROM bons_sortie bs WHERE bs.date_sortie LIKE ?",
+                (f'{mois}%',)).fetchone()[0] or 0
+        except: nb_sorties_mois = 0
+        
+        try:
+            nb_receptions_mois = conn.execute(
+                "SELECT COUNT(*) FROM bons_reception WHERE date_reception LIKE ?",
+                (f'{mois}%',)).fetchone()[0] or 0
+        except: nb_receptions_mois = 0
+        
+        try:
+            chantier_stats = conn.execute("""SELECT ch.nom, COUNT(DISTINCT bs.id) as nb_sorties,
+                COALESCE(SUM(bsl.quantite * a.prix_achat), 0) as cout
+                FROM bons_sortie bs
+                LEFT JOIN bons_sortie_lignes bsl ON bsl.bon_id=bs.id
+                LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
+                LEFT JOIN articles a ON bsl.article_id=a.id
+                GROUP BY bs.chantier_id, ch.nom ORDER BY cout DESC""").fetchall()
+        except: chantier_stats = []
+        
+    except Exception as e:
+        conn.close()
+        raise e
+    
     conn.close()
     return render_template('analytics.html',
         valeur_totale=valeur_totale, total=total, ruptures=ruptures, critiques=critiques,
