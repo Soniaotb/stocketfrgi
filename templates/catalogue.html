@@ -52,6 +52,7 @@
       <th>Prix</th>
       <th>Stock</th>
       <th>Min</th>
+      <th>Délai livr.</th>
       <th>État</th>
       <th>Actions</th>
     </tr>
@@ -107,6 +108,15 @@
     <!-- Min -->
     <td style="color:#aaa;font-size:.78rem">{{ a['stock_min'] }}</td>
 
+    <!-- Délai livraison -->
+    <td>
+      {% if a['delai_livraison'] and a['delai_livraison'] > 0 %}
+      <span style="font-size:.75rem;font-weight:700;color:#0369a1;background:#f0f9ff;padding:2px 8px;border-radius:10px;white-space:nowrap">
+        ⏱️ {{ a['delai_livraison'] }}j
+      </span>
+      {% else %}<span style="color:#ccc;font-size:.72rem">—</span>{% endif %}
+    </td>
+
     <!-- État -->
     <td>
       {% if etat=='RUPTURE' %}<span class="badge badge-rupture">🔴</span>
@@ -124,7 +134,7 @@
     </td>
   </tr>
   {% else %}
-  <tr><td colspan="14" style="text-align:center;padding:30px;color:#888">Aucun article trouvé</td></tr>
+  <tr><td colspan="15" style="text-align:center;padding:30px;color:#888">Aucun article trouvé</td></tr>
   {% endfor %}
   </tbody>
 </table>

@@ -82,7 +82,7 @@
 
 <script>
 var ligneCount = 1;
-var artData = { {% for a in articles %}"{{ a['id'] }}":{s:{{ a['stock'] }},p:{{ a['prix_achat'] }},f:"{{ a['fournisseur'] }}"},{% endfor %} };
+var artData = { {% for a in articles %}"{{ a['id'] }}":{s:{{ a['stock'] }},p:{{ a['prix_achat'] }},f:"{{ a['fournisseur'] }}",d:{{ a['delai_livraison'] or 0 }}},{% endfor %} };
 
 function getOptions() {
   var opts = '<option value="">-- Choisir --</option>';
@@ -129,6 +129,19 @@ function updateLigne(sel) {
   if (d) {
     stockCell.innerHTML = '<strong style="color:' + (d.s==0?'#dc2626':d.s<5?'#d97706':'#16a34a') + '">' + d.s + '</strong>';
     if (d.p > 0) prixInput.value = d.p;
+    // Afficher le délai de livraison
+    var delaiEl = row.querySelector('.delai-info');
+    if (!delaiEl) {
+      delaiEl = document.createElement('div');
+      delaiEl.className = 'delai-info';
+      delaiEl.style.cssText = 'font-size:.7rem;color:#0369a1;margin-top:2px';
+      row.querySelector('select').parentNode.appendChild(delaiEl);
+    }
+    if (d.d > 0) {
+      delaiEl.innerHTML = '⏱️ Délai livraison : <strong>' + d.d + ' jour(s)</strong>';
+    } else {
+      delaiEl.innerHTML = '';
+    }
     if (d.f) {
       var fs = document.getElementById('fournisseur-global');
       if (!fs.value) {

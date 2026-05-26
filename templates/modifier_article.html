@@ -59,6 +59,11 @@
     <div class="form-group"><label>Stock min</label><input type="number" name="stock_min" value="{{ article['stock_min'] }}" min="0"></div>
     <div class="form-group"><label>Stock alerte</label><input type="number" name="stock_alerte" value="{{ article['stock_alerte'] }}" min="0"></div>
     <div class="form-group"><label>Stock max</label><input type="number" name="stock_max" value="{{ article['stock_max'] }}" min="0"></div>
+    <div class="form-group">
+      <label>⏱️ Délai de livraison (jours)</label>
+      <input type="number" name="delai_livraison" value="{{ article['delai_livraison'] or 0 }}" min="0" max="365" placeholder="Ex: 7, 14, 30...">
+      <small style="color:#888;font-size:.7rem">Nombre de jours entre la commande et la réception</small>
+    </div>
     <div class="form-group" style="grid-column:1/-1"><label>Observations</label><textarea name="observations">{{ article['observations'] }}</textarea></div>
   </div>
   <div style="margin-top:16px;display:flex;gap:10px">
