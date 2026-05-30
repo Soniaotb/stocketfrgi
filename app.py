@@ -1314,8 +1314,8 @@ def ajouter_article():
         new_id = f"ART-{n:03d}"
         conn.execute("""INSERT INTO articles
             (id,famille,designation,reference,marque,container_id,emplacement,unite,colisage,
-             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,observations)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(
+             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,delai_livraison,observations)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(
             new_id, request.form.get('famille',''), request.form.get('designation',''),
             request.form.get('reference',''), request.form.get('marque',''),
             int(request.form.get('container_id',1)), request.form.get('emplacement',''),
@@ -1323,6 +1323,7 @@ def ajouter_article():
             float(request.form.get('prix_achat',0)), request.form.get('fournisseur',''),
             int(request.form.get('stock',0)), int(request.form.get('stock_min',0)),
             int(request.form.get('stock_alerte',0)), int(request.form.get('stock_max',0)),
+            int(request.form.get('delai_livraison',0)),
             request.form.get('observations',''),
         ))
         conn.commit(); conn.close()
@@ -1346,14 +1347,15 @@ def modifier_article(id):
     if request.method == 'POST':
         conn.execute("""UPDATE articles SET famille=?,designation=?,reference=?,marque=?,
             container_id=?,emplacement=?,unite=?,colisage=?,prix_achat=?,fournisseur=?,
-            stock_min=?,stock_alerte=?,stock_max=?,observations=? WHERE id=?""",(
+            stock_min=?,stock_alerte=?,stock_max=?,delai_livraison=?,observations=? WHERE id=?""",(
             request.form.get('famille',''), request.form.get('designation',''),
             request.form.get('reference',''), request.form.get('marque',''),
             int(request.form.get('container_id',1)), request.form.get('emplacement',''),
             request.form.get('unite','UNITE'), int(request.form.get('colisage',1)),
             float(request.form.get('prix_achat',0)), request.form.get('fournisseur',''),
             int(request.form.get('stock_min',0)), int(request.form.get('stock_alerte',0)),
-            int(request.form.get('stock_max',0)), request.form.get('observations',''), id,
+            int(request.form.get('stock_max',0)), int(request.form.get('delai_livraison',0)),
+            request.form.get('observations',''), id,
         ))
         conn.commit(); conn.close()
         flash('Article modifié','success')
@@ -1540,14 +1542,22 @@ def nouvelle_commande():
     if request.method == 'POST':
         numero = get_next_numero('commandes','numero','CMD-')
         conn = get_db()
+        date_dem = request.form.get('date_demande', date.today().isoformat())
+        livraison = request.form.get('livraison_prevue','')
+        delai_jours = 0
+        if livraison and date_dem:
+            try:
+                from datetime import datetime as dt2
+                d1 = dt2.strptime(date_dem, '%Y-%m-%d')
+                d2 = dt2.strptime(livraison, '%Y-%m-%d')
+                delai_jours = max(0, (d2 - d1).days)
+            except: pass
         conn.execute("""INSERT INTO commandes
             (numero,date_demande,fournisseur,statut,livraison_prevue,commentaire,created_by)
             VALUES (?,?,?,?,?,?,?)""",(
-            numero,
-            request.form.get('date_demande',date.today().isoformat()),
+            numero, date_dem,
             request.form.get('fournisseur',''),
-            'EN ATTENTE',
-            request.form.get('livraison_prevue',''),
+            'EN ATTENTE', livraison,
             request.form.get('commentaire',''),
             session.get('user_id'),
         ))
@@ -1670,40 +1680,65 @@ def mouvements():
 @login_required
 def analytics():
     conn = get_db()
-    articles = conn.execute("SELECT * FROM articles WHERE actif=1").fetchall()
-    valeur_totale = sum(a['stock']*a['prix_achat'] for a in articles)
-    total = len(articles)
-    ruptures = sum(1 for a in articles if a['stock']==0)
-    critiques = sum(1 for a in articles if 0<a['stock']<=a['stock_min'])
-    alertes = sum(1 for a in articles if a['stock_min']<a['stock']<=a['stock_alerte'])
-    familles_stats = {}
-    for a in articles:
-        f = a['famille']
-        if f not in familles_stats:
-            familles_stats[f] = {'nb':0,'valeur':0,'ruptures':0,'alertes':0}
-        familles_stats[f]['nb'] += 1
-        familles_stats[f]['valeur'] += a['stock']*a['prix_achat']
-        etat = get_etat_stock(a['stock'],a['stock_min'],a['stock_alerte'])
-        if etat == 'RUPTURE': familles_stats[f]['ruptures'] += 1
-        elif etat in ('CRITIQUE','ALERTE'): familles_stats[f]['alertes'] += 1
-    familles_list = sorted(familles_stats.items(), key=lambda x:x[1]['valeur'], reverse=True)
-    top_sorties = conn.execute("""SELECT bsl.article_id, a.designation, SUM(bsl.quantite) as total_sorti,
-        a.unite, MAX(bs.date_sortie) as derniere_sortie
-        FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
-        LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id
-        GROUP BY bsl.article_id ORDER BY total_sorti DESC LIMIT 10""").fetchall()
-    urgents = sorted([a for a in articles if a['stock']<=a['stock_min']], key=lambda x:x['stock'])
-    mois = date.today().strftime('%Y-%m')
-    nb_sorties_mois = conn.execute("SELECT COUNT(DISTINCT bon_id) FROM bons_sortie_lignes bsl LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id WHERE bs.date_sortie LIKE ?",(f'{mois}%',)).fetchone()[0]
-    nb_receptions_mois = conn.execute("SELECT COUNT(*) FROM bons_reception WHERE date_reception LIKE ?",(f'{mois}%',)).fetchone()[0]
-    # Stats par chantier
-    chantier_stats = conn.execute("""SELECT ch.nom, COUNT(DISTINCT bs.id) as nb_sorties,
-        SUM(bsl.quantite * a.prix_achat) as cout
-        FROM bons_sortie bs
-        LEFT JOIN bons_sortie_lignes bsl ON bsl.bon_id=bs.id
-        LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
-        LEFT JOIN articles a ON bsl.article_id=a.id
-        GROUP BY bs.chantier_id ORDER BY cout DESC""").fetchall()
+    try:
+        articles = conn.execute("SELECT * FROM articles WHERE actif=1").fetchall()
+        valeur_totale = sum((a['stock'] or 0)*(a['prix_achat'] or 0) for a in articles)
+        total = len(articles)
+        ruptures = sum(1 for a in articles if (a['stock'] or 0)==0)
+        critiques = sum(1 for a in articles if 0<(a['stock'] or 0)<=(a['stock_min'] or 0))
+        alertes = sum(1 for a in articles if (a['stock_min'] or 0)<(a['stock'] or 0)<=(a['stock_alerte'] or 0))
+        
+        familles_stats = {}
+        for a in articles:
+            f = a['famille'] or 'Divers'
+            if f not in familles_stats:
+                familles_stats[f] = {'nb':0,'valeur':0,'ruptures':0,'alertes':0}
+            familles_stats[f]['nb'] += 1
+            familles_stats[f]['valeur'] += (a['stock'] or 0)*(a['prix_achat'] or 0)
+            etat = get_etat_stock(a['stock'] or 0, a['stock_min'] or 0, a['stock_alerte'] or 0)
+            if etat == 'RUPTURE': familles_stats[f]['ruptures'] += 1
+            elif etat in ('CRITIQUE','ALERTE'): familles_stats[f]['alertes'] += 1
+        familles_list = sorted(familles_stats.items(), key=lambda x:x[1]['valeur'], reverse=True)
+        
+        try:
+            top_sorties = conn.execute("""SELECT bsl.article_id, a.designation,
+                SUM(bsl.quantite) as total_sorti, a.unite, MAX(bs.date_sortie) as derniere_sortie
+                FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
+                LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id
+                GROUP BY bsl.article_id, a.designation, a.unite
+                ORDER BY total_sorti DESC LIMIT 10""").fetchall()
+        except: top_sorties = []
+        
+        urgents = sorted([a for a in articles if (a['stock'] or 0)<=(a['stock_min'] or 0)],
+                        key=lambda x: x['stock'] or 0)
+        
+        mois = date.today().strftime('%Y-%m')
+        try:
+            nb_sorties_mois = conn.execute(
+                "SELECT COUNT(DISTINCT bs.id) FROM bons_sortie bs WHERE bs.date_sortie LIKE ?",
+                (f'{mois}%',)).fetchone()[0] or 0
+        except: nb_sorties_mois = 0
+        
+        try:
+            nb_receptions_mois = conn.execute(
+                "SELECT COUNT(*) FROM bons_reception WHERE date_reception LIKE ?",
+                (f'{mois}%',)).fetchone()[0] or 0
+        except: nb_receptions_mois = 0
+        
+        try:
+            chantier_stats = conn.execute("""SELECT ch.nom, COUNT(DISTINCT bs.id) as nb_sorties,
+                COALESCE(SUM(bsl.quantite * a.prix_achat), 0) as cout
+                FROM bons_sortie bs
+                LEFT JOIN bons_sortie_lignes bsl ON bsl.bon_id=bs.id
+                LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
+                LEFT JOIN articles a ON bsl.article_id=a.id
+                GROUP BY bs.chantier_id, ch.nom ORDER BY cout DESC""").fetchall()
+        except: chantier_stats = []
+        
+    except Exception as e:
+        conn.close()
+        raise e
+    
     conn.close()
     return render_template('analytics.html',
         valeur_totale=valeur_totale, total=total, ruptures=ruptures, critiques=critiques,
@@ -2086,14 +2121,26 @@ def api_recherche_articles():
     if len(q) < 2:
         return jsonify([])
     conn = get_db()
-    articles = conn.execute("""
-        SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
-        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
-        WHERE a.actif=1 AND (
-            a.designation LIKE ? OR a.id LIKE ? OR 
-            a.reference LIKE ? OR a.marque LIKE ? OR a.famille LIKE ?
-        ) ORDER BY a.designation LIMIT 15
-    """, [f'%{q}%']*5).fetchall()
+    q_lower = q.lower()
+    if USE_POSTGRES:
+        search_sql = """
+            SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
+            FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+            WHERE a.actif=1 AND (
+                a.designation ILIKE ? OR a.id ILIKE ? OR
+                a.reference ILIKE ? OR a.marque ILIKE ? OR
+                a.famille ILIKE ? OR a.fournisseur ILIKE ?
+            ) ORDER BY a.designation LIMIT 15"""
+    else:
+        search_sql = """
+            SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
+            FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+            WHERE a.actif=1 AND (
+                LOWER(a.designation) LIKE ? OR LOWER(a.id) LIKE ? OR
+                LOWER(a.reference) LIKE ? OR LOWER(a.marque) LIKE ? OR
+                LOWER(a.famille) LIKE ? OR LOWER(a.fournisseur) LIKE ?
+            ) ORDER BY a.designation LIMIT 15"""
+    articles = conn.execute(search_sql, [f'%{q_lower}%']*6).fetchall()
     conn.close()
     result = []
     for a in articles:
@@ -2110,5 +2157,144 @@ def api_recherche_articles():
     return jsonify(result)
 
 
+
+@app.route('/articles/<id>/qrcode')
+@login_required
+def qrcode_article(id):
+    """Page avec QR code imprimable pour un article."""
+    conn = get_db()
+    article = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.id=?""",(id,)).fetchone()
+    conn.close()
+    if not article:
+        flash('Article introuvable','error')
+        return redirect(url_for('catalogue'))
+    return render_template('print_qrcode.html', article=article)
+
+@app.route('/articles/qrcodes-container/<int:container_id>')
+@login_required  
+def qrcodes_container_v1(container_id):
+    """Page avec tous les QR codes d un container."""
+    conn = get_db()
+    ct = conn.execute("SELECT * FROM containers WHERE id=?",(container_id,)).fetchone()
+    articles = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.container_id=? AND a.actif=1 ORDER BY a.famille, a.designation""",(container_id,)).fetchall()
+    conn.close()
+    if not ct:
+        flash('Container introuvable','error')
+        return redirect(url_for('containers'))
+    return render_template('print_qrcodes_container.html', ct=ct, articles=articles)
+
+# ─── MODULE SCAN MOBILE ───────────────────────────────────────────────────────
+# Pages légères optimisées téléphone — indépendantes de l'application principale
+
+@app.route('/scan')
+@login_required
+def scan_mobile():
+    """Page d'accueil scan mobile."""
+    return render_template('mobile_scan.html')
+
+@app.route('/scan/article/<id>')
+@login_required
+def scan_article(id):
+    """Fiche article après scan QR — vue mobile."""
+    conn = get_db()
+    article = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.id=? AND a.actif=1""",(id,)).fetchone()
+    chantiers = conn.execute("SELECT * FROM chantiers WHERE actif=1 ORDER BY nom").fetchall()
+    conn.close()
+    if not article:
+        return render_template('mobile_article_not_found.html', id=id)
+    return render_template('mobile_article.html', article=article, chantiers=chantiers)
+
+@app.route('/scan/sortie/<id>', methods=['POST'])
+@login_required
+def scan_sortie(id):
+    """Valider une sortie depuis le scan mobile."""
+    conn = get_db()
+    article = conn.execute("SELECT * FROM articles WHERE id=? AND actif=1",(id,)).fetchone()
+    if not article:
+        conn.close()
+        return render_template('mobile_erreur.html', msg="Article introuvable")
+    
+    quantite = int(request.form.get('quantite', 1))
+    chantier_id = int(request.form.get('chantier_id', 0))
+    demandeur = request.form.get('demandeur', session.get('user_nom',''))
+    
+    if quantite <= 0:
+        conn.close()
+        return render_template('mobile_erreur.html', msg="Quantité invalide")
+    
+    if quantite > article['stock']:
+        conn.close()
+        return render_template('mobile_erreur.html', 
+            msg=f"Stock insuffisant — disponible : {article['stock']} {article['unite']}")
+    
+    from datetime import date as dt
+    numero = get_next_numero('bons_sortie','numero','BS-')
+    s_avant = article['stock']
+    s_apres = s_avant - quantite
+    
+    conn.execute("""INSERT INTO bons_sortie
+        (numero,date_sortie,demandeur,chantier_id,commentaire,created_by)
+        VALUES (?,?,?,?,?,?)""",(
+        numero, dt.today().isoformat(),
+        demandeur, chantier_id, 'Sortie via scan mobile',
+        session.get('user_id'),
+    ))
+    bon_id = conn.execute("SELECT id FROM bons_sortie WHERE numero=?",(numero,)).fetchone()[0]
+    conn.execute("INSERT INTO bons_sortie_lignes (bon_id,article_id,quantite,prix_achat) VALUES (?,?,?,?)",
+        (bon_id, id, quantite, article['prix_achat']))
+    conn.execute("UPDATE articles SET stock=? WHERE id=?",(s_apres, id))
+    conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
+        quantite,reference_doc,stock_avant,stock_apres,container_id,chantier_id)
+        VALUES (?,?,?,?,?,?,?,?,?)""",(
+        dt.today().isoformat(),'SORTIE',id,quantite,numero,
+        s_avant,s_apres,article['container_id'],chantier_id
+    ))
+    conn.commit()
+    conn.close()
+    
+    return render_template('mobile_succes.html', 
+        article=article, quantite=quantite, 
+        nouveau_stock=s_apres, numero=numero)
+
+@app.route('/scan/qrcode/<id>')
+@login_required
+def generer_qrcode(id):
+    """Générer et afficher le QR code d un article."""
+    conn = get_db()
+    article = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.id=? AND a.actif=1""",(id,)).fetchone()
+    conn.close()
+    if not article:
+        flash('Article introuvable','error')
+        return redirect(url_for('catalogue'))
+    # URL de scan pour cet article
+    from flask import request as req
+    base_url = req.host_url.rstrip('/')
+    scan_url = f"{base_url}/scan/article/{id}"
+    return render_template('print_qrcode.html', article=article, scan_url=scan_url)
+
+@app.route('/scan/qrcodes-container/<int:container_id>')
+@login_required
+def qrcodes_container(container_id):
+    """Imprimer tous les QR codes d un container."""
+    conn = get_db()
+    ct = conn.execute("SELECT * FROM containers WHERE id=?",(container_id,)).fetchone()
+    articles = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.container_id=? AND a.actif=1 ORDER BY a.famille, a.designation""",(container_id,)).fetchall()
+    conn.close()
+    if not ct:
+        flash('Container introuvable','error')
+        return redirect(url_for('containers'))
+    from flask import request as req
+    base_url = req.host_url.rstrip('/')
+    return render_template('print_qrcodes_container.html', ct=ct, articles=articles, base_url=base_url)
 if __name__ == '__main__':
     app.run(debug=False)
