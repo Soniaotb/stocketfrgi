@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Article introuvable</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;text-align:center}
+.icon{font-size:3rem;margin-bottom:12px}
+h1{font-size:1rem;font-weight:700;color:#1a1a2e;margin-bottom:8px}
+p{font-size:.82rem;color:#888;margin-bottom:20px}
+.btn{display:block;padding:13px;border-radius:10px;font-size:.9rem;font-weight:700;text-decoration:none;background:#E8661A;color:#fff;margin-bottom:8px}
+.btn-outline{background:#f5f5f5;color:#333;border:1px solid #ddd}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🔍</div>
+  <h1>Article introuvable</h1>
+  <p>L'article <strong>{{ id }}</strong> n'existe pas dans le stock.</p>
+  <a href="/scan" class="btn">📱 Retour au scan</a>
+  <a href="/" class="btn btn-outline">🏠 Application</a>
+</div>
+</body>
+</html>

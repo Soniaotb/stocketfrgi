@@ -128,6 +128,7 @@
     <!-- Actions -->
     <td style="white-space:nowrap">
       <a href="{{ url_for('modifier_article', id=a['id']) }}" class="btn btn-outline btn-sm">✏️</a>
+      <a href="{{ url_for('generer_qrcode', id=a['id']) }}" target="_blank" class="btn btn-outline btn-sm" title="QR Code">📱</a>
       <form method="POST" action="{{ url_for('supprimer_article', id=a['id']) }}" style="display:inline" onsubmit="return confirm('Archiver cet article ?')">
         <button type="submit" class="btn btn-danger btn-sm">🗑</button>
       </form>

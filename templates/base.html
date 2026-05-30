@@ -230,6 +230,11 @@ tbody td{padding:8px 11px;vertical-align:middle}
       {% if nav_alertes > 0 %}<span class="nav-badge amber">{{ nav_alertes }}</span>{% endif %}
     </a>
 
+    <div class="nav-section">Mobile</div>
+    <a href="{{ url_for('scan_mobile') }}" class="nav-link {% if 'scan' in request.endpoint %}active{% endif %}">
+      <span class="ico">📱</span>Scan terrain
+    </a>
+
     {% if session.user_role in ['admin','responsable'] %}
     <div class="nav-section">Admin</div>
     <a href="{{ url_for('parametres') }}" class="nav-link {% if request.endpoint=='parametres' %}active{% endif %}">

@@ -7,6 +7,7 @@
   <div style="display:flex;gap:8px">
     <a href="{{ url_for('export_container', id=ct.id) }}" class="btn btn-outline">📊 Export CSV</a>
     <a href="{{ url_for('imprimer_container', id=ct.id) }}" target="_blank" class="btn btn-outline">🖨️ Imprimer fiche</a>
+    <a href="{{ url_for('qrcodes_container', container_id=ct.id) }}" target="_blank" class="btn btn-outline">📱 QR Codes</a>
     <a href="{{ url_for('nouveau_transfert') }}" class="btn btn-outline">🔀 Transférer</a>
     <a href="{{ url_for('containers') }}" class="btn btn-outline">← Retour</a>
   </div>

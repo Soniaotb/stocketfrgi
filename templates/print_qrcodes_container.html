@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>QR Codes — {{ ct['nom'] }}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;padding:20px}
+.no-print{margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{padding:9px 18px;border:none;border-radius:7px;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-print{background:#1a1a2e;color:#fff}
+.btn-back{background:#f0f2f5;color:#333;border:1px solid #ddd}
+.titre{font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:4px}
+.sous-titre{font-size:.78rem;color:#888;margin-bottom:16px}
+.etiquettes{display:grid;grid-template-columns:repeat(auto-fill,210px);gap:12px}
+.etiquette{border:1.5px solid #ccc;border-radius:8px;padding:10px;text-align:center;page-break-inside:avoid;break-inside:avoid}
+.qr-container{display:flex;justify-content:center;margin-bottom:8px}
+.art-id{font-size:.68rem;font-weight:800;color:#E8661A;margin-bottom:2px}
+.art-name{font-size:.72rem;font-weight:700;color:#1a1a2e;line-height:1.3;margin-bottom:3px;max-height:32px;overflow:hidden}
+.art-info{font-size:.62rem;color:#888;margin-bottom:1px}
+.art-stock{font-size:.78rem;font-weight:800;margin-top:5px;padding:2px 6px;border-radius:5px;display:inline-block}
+.stock-ok{background:#dcfce7;color:#16a34a}
+.stock-warn{background:#fef3c7;color:#d97706}
+.stock-bad{background:#fee2e2;color:#dc2626}
+@media print{
+  .no-print{display:none!important}
+  body{padding:5mm}
+  .etiquettes{grid-template-columns:repeat(4,1fr);gap:6px}
+  .etiquette{border:1px solid #999;padding:6px}
+}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button class="btn btn-print" onclick="window.print()">🖨️ Imprimer tous les QR codes</button>
+  <a href="javascript:history.back()" class="btn btn-back">← Retour</a>
+  <span style="font-size:.8rem;color:#888">{{ articles|length }} étiquettes</span>
+</div>
+
+<div class="titre">📦 QR Codes — {{ ct['nom'] }} ({{ ct['code'] }})</div>
+<div class="sous-titre">{{ articles|length }} articles — Imprimez et collez sur chaque étagère</div>
+
+<div class="etiquettes">
+{% for a in articles %}
+<div class="etiquette">
+  <div class="qr-container">
+    <div id="qr-{{ a['id'] | replace('-','_') }}"></div>
+  </div>
+  <div class="art-id">{{ a['id'] }}</div>
+  <div class="art-name">{{ a['designation'][:35] }}</div>
+  {% if a['emplacement'] %}
+  <div class="art-info">📍 {{ a['emplacement'] }}</div>
+  {% endif %}
+  <div class="art-info">{{ a['famille'] }}</div>
+  <div class="art-stock {% if a['stock'] == 0 %}stock-bad{% elif a['stock'] <= a['stock_min'] %}stock-warn{% else %}stock-ok{% endif %}">
+    {{ a['stock'] }} {{ a['unite'] }}
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<script>
+var articles = [
+{% for a in articles %}
+  {id: "{{ a['id'] }}", url: "{{ base_url }}/scan/article/{{ a['id'] }}"},
+{% endfor %}
+];
+
+articles.forEach(function(a) {
+  var elId = 'qr-' + a.id.replace(/-/g,'_');
+  var el = document.getElementById(elId);
+  if (el) {
+    new QRCode(el, {
+      text: a.url,
+      width: 100,
+      height: 100,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+});
+</script>
+</body>
+</html>

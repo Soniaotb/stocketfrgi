@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>❌ Erreur</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#fef2f2;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.icon{font-size:4rem;margin-bottom:16px}
+h1{font-size:1.1rem;font-weight:800;color:#dc2626;margin-bottom:12px}
+p{font-size:.85rem;color:#666;margin-bottom:24px;background:#fee2e2;padding:12px;border-radius:8px}
+.btn{display:block;width:100%;padding:14px;border-radius:10px;font-size:.92rem;font-weight:700;border:none;cursor:pointer;text-decoration:none;margin-bottom:10px;text-align:center}
+.btn-orange{background:#E8661A;color:#fff}
+.btn-outline{background:#f5f5f5;color:#333;border:1px solid #ddd}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">❌</div>
+  <h1>Impossible de valider</h1>
+  <p>{{ msg }}</p>
+  <a href="javascript:history.back()" class="btn btn-orange">← Retour</a>
+  <a href="/scan" class="btn btn-outline">📱 Scanner autre article</a>
+</div>
+</body>
+</html>

@@ -1314,8 +1314,8 @@ def ajouter_article():
         new_id = f"ART-{n:03d}"
         conn.execute("""INSERT INTO articles
             (id,famille,designation,reference,marque,container_id,emplacement,unite,colisage,
-             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,delai_livraison,observations)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(
+             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,observations)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(
             new_id, request.form.get('famille',''), request.form.get('designation',''),
             request.form.get('reference',''), request.form.get('marque',''),
             int(request.form.get('container_id',1)), request.form.get('emplacement',''),
@@ -1323,7 +1323,6 @@ def ajouter_article():
             float(request.form.get('prix_achat',0)), request.form.get('fournisseur',''),
             int(request.form.get('stock',0)), int(request.form.get('stock_min',0)),
             int(request.form.get('stock_alerte',0)), int(request.form.get('stock_max',0)),
-            int(request.form.get('delai_livraison',0)),
             request.form.get('observations',''),
         ))
         conn.commit(); conn.close()
@@ -1347,15 +1346,14 @@ def modifier_article(id):
     if request.method == 'POST':
         conn.execute("""UPDATE articles SET famille=?,designation=?,reference=?,marque=?,
             container_id=?,emplacement=?,unite=?,colisage=?,prix_achat=?,fournisseur=?,
-            stock_min=?,stock_alerte=?,stock_max=?,delai_livraison=?,observations=? WHERE id=?""",(
+            stock_min=?,stock_alerte=?,stock_max=?,observations=? WHERE id=?""",(
             request.form.get('famille',''), request.form.get('designation',''),
             request.form.get('reference',''), request.form.get('marque',''),
             int(request.form.get('container_id',1)), request.form.get('emplacement',''),
             request.form.get('unite','UNITE'), int(request.form.get('colisage',1)),
             float(request.form.get('prix_achat',0)), request.form.get('fournisseur',''),
             int(request.form.get('stock_min',0)), int(request.form.get('stock_alerte',0)),
-            int(request.form.get('stock_max',0)), int(request.form.get('delai_livraison',0)),
-            request.form.get('observations',''), id,
+            int(request.form.get('stock_max',0)), request.form.get('observations',''), id,
         ))
         conn.commit(); conn.close()
         flash('Article modifié','success')
@@ -1542,22 +1540,14 @@ def nouvelle_commande():
     if request.method == 'POST':
         numero = get_next_numero('commandes','numero','CMD-')
         conn = get_db()
-        date_dem = request.form.get('date_demande', date.today().isoformat())
-        livraison = request.form.get('livraison_prevue','')
-        delai_jours = 0
-        if livraison and date_dem:
-            try:
-                from datetime import datetime as dt2
-                d1 = dt2.strptime(date_dem, '%Y-%m-%d')
-                d2 = dt2.strptime(livraison, '%Y-%m-%d')
-                delai_jours = max(0, (d2 - d1).days)
-            except: pass
         conn.execute("""INSERT INTO commandes
             (numero,date_demande,fournisseur,statut,livraison_prevue,commentaire,created_by)
             VALUES (?,?,?,?,?,?,?)""",(
-            numero, date_dem,
+            numero,
+            request.form.get('date_demande',date.today().isoformat()),
             request.form.get('fournisseur',''),
-            'EN ATTENTE', livraison,
+            'EN ATTENTE',
+            request.form.get('livraison_prevue',''),
             request.form.get('commentaire',''),
             session.get('user_id'),
         ))
@@ -1680,65 +1670,40 @@ def mouvements():
 @login_required
 def analytics():
     conn = get_db()
-    try:
-        articles = conn.execute("SELECT * FROM articles WHERE actif=1").fetchall()
-        valeur_totale = sum((a['stock'] or 0)*(a['prix_achat'] or 0) for a in articles)
-        total = len(articles)
-        ruptures = sum(1 for a in articles if (a['stock'] or 0)==0)
-        critiques = sum(1 for a in articles if 0<(a['stock'] or 0)<=(a['stock_min'] or 0))
-        alertes = sum(1 for a in articles if (a['stock_min'] or 0)<(a['stock'] or 0)<=(a['stock_alerte'] or 0))
-        
-        familles_stats = {}
-        for a in articles:
-            f = a['famille'] or 'Divers'
-            if f not in familles_stats:
-                familles_stats[f] = {'nb':0,'valeur':0,'ruptures':0,'alertes':0}
-            familles_stats[f]['nb'] += 1
-            familles_stats[f]['valeur'] += (a['stock'] or 0)*(a['prix_achat'] or 0)
-            etat = get_etat_stock(a['stock'] or 0, a['stock_min'] or 0, a['stock_alerte'] or 0)
-            if etat == 'RUPTURE': familles_stats[f]['ruptures'] += 1
-            elif etat in ('CRITIQUE','ALERTE'): familles_stats[f]['alertes'] += 1
-        familles_list = sorted(familles_stats.items(), key=lambda x:x[1]['valeur'], reverse=True)
-        
-        try:
-            top_sorties = conn.execute("""SELECT bsl.article_id, a.designation,
-                SUM(bsl.quantite) as total_sorti, a.unite, MAX(bs.date_sortie) as derniere_sortie
-                FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
-                LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id
-                GROUP BY bsl.article_id, a.designation, a.unite
-                ORDER BY total_sorti DESC LIMIT 10""").fetchall()
-        except: top_sorties = []
-        
-        urgents = sorted([a for a in articles if (a['stock'] or 0)<=(a['stock_min'] or 0)],
-                        key=lambda x: x['stock'] or 0)
-        
-        mois = date.today().strftime('%Y-%m')
-        try:
-            nb_sorties_mois = conn.execute(
-                "SELECT COUNT(DISTINCT bs.id) FROM bons_sortie bs WHERE bs.date_sortie LIKE ?",
-                (f'{mois}%',)).fetchone()[0] or 0
-        except: nb_sorties_mois = 0
-        
-        try:
-            nb_receptions_mois = conn.execute(
-                "SELECT COUNT(*) FROM bons_reception WHERE date_reception LIKE ?",
-                (f'{mois}%',)).fetchone()[0] or 0
-        except: nb_receptions_mois = 0
-        
-        try:
-            chantier_stats = conn.execute("""SELECT ch.nom, COUNT(DISTINCT bs.id) as nb_sorties,
-                COALESCE(SUM(bsl.quantite * a.prix_achat), 0) as cout
-                FROM bons_sortie bs
-                LEFT JOIN bons_sortie_lignes bsl ON bsl.bon_id=bs.id
-                LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
-                LEFT JOIN articles a ON bsl.article_id=a.id
-                GROUP BY bs.chantier_id, ch.nom ORDER BY cout DESC""").fetchall()
-        except: chantier_stats = []
-        
-    except Exception as e:
-        conn.close()
-        raise e
-    
+    articles = conn.execute("SELECT * FROM articles WHERE actif=1").fetchall()
+    valeur_totale = sum(a['stock']*a['prix_achat'] for a in articles)
+    total = len(articles)
+    ruptures = sum(1 for a in articles if a['stock']==0)
+    critiques = sum(1 for a in articles if 0<a['stock']<=a['stock_min'])
+    alertes = sum(1 for a in articles if a['stock_min']<a['stock']<=a['stock_alerte'])
+    familles_stats = {}
+    for a in articles:
+        f = a['famille']
+        if f not in familles_stats:
+            familles_stats[f] = {'nb':0,'valeur':0,'ruptures':0,'alertes':0}
+        familles_stats[f]['nb'] += 1
+        familles_stats[f]['valeur'] += a['stock']*a['prix_achat']
+        etat = get_etat_stock(a['stock'],a['stock_min'],a['stock_alerte'])
+        if etat == 'RUPTURE': familles_stats[f]['ruptures'] += 1
+        elif etat in ('CRITIQUE','ALERTE'): familles_stats[f]['alertes'] += 1
+    familles_list = sorted(familles_stats.items(), key=lambda x:x[1]['valeur'], reverse=True)
+    top_sorties = conn.execute("""SELECT bsl.article_id, a.designation, SUM(bsl.quantite) as total_sorti,
+        a.unite, MAX(bs.date_sortie) as derniere_sortie
+        FROM bons_sortie_lignes bsl LEFT JOIN articles a ON bsl.article_id=a.id
+        LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id
+        GROUP BY bsl.article_id ORDER BY total_sorti DESC LIMIT 10""").fetchall()
+    urgents = sorted([a for a in articles if a['stock']<=a['stock_min']], key=lambda x:x['stock'])
+    mois = date.today().strftime('%Y-%m')
+    nb_sorties_mois = conn.execute("SELECT COUNT(DISTINCT bon_id) FROM bons_sortie_lignes bsl LEFT JOIN bons_sortie bs ON bsl.bon_id=bs.id WHERE bs.date_sortie LIKE ?",(f'{mois}%',)).fetchone()[0]
+    nb_receptions_mois = conn.execute("SELECT COUNT(*) FROM bons_reception WHERE date_reception LIKE ?",(f'{mois}%',)).fetchone()[0]
+    # Stats par chantier
+    chantier_stats = conn.execute("""SELECT ch.nom, COUNT(DISTINCT bs.id) as nb_sorties,
+        SUM(bsl.quantite * a.prix_achat) as cout
+        FROM bons_sortie bs
+        LEFT JOIN bons_sortie_lignes bsl ON bsl.bon_id=bs.id
+        LEFT JOIN chantiers ch ON bs.chantier_id=ch.id
+        LEFT JOIN articles a ON bsl.article_id=a.id
+        GROUP BY bs.chantier_id ORDER BY cout DESC""").fetchall()
     conn.close()
     return render_template('analytics.html',
         valeur_totale=valeur_totale, total=total, ruptures=ruptures, critiques=critiques,
@@ -2121,26 +2086,14 @@ def api_recherche_articles():
     if len(q) < 2:
         return jsonify([])
     conn = get_db()
-    q_lower = q.lower()
-    if USE_POSTGRES:
-        search_sql = """
-            SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
-            FROM articles a LEFT JOIN containers c ON a.container_id=c.id
-            WHERE a.actif=1 AND (
-                a.designation ILIKE ? OR a.id ILIKE ? OR
-                a.reference ILIKE ? OR a.marque ILIKE ? OR
-                a.famille ILIKE ? OR a.fournisseur ILIKE ?
-            ) ORDER BY a.designation LIMIT 15"""
-    else:
-        search_sql = """
-            SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
-            FROM articles a LEFT JOIN containers c ON a.container_id=c.id
-            WHERE a.actif=1 AND (
-                LOWER(a.designation) LIKE ? OR LOWER(a.id) LIKE ? OR
-                LOWER(a.reference) LIKE ? OR LOWER(a.marque) LIKE ? OR
-                LOWER(a.famille) LIKE ? OR LOWER(a.fournisseur) LIKE ?
-            ) ORDER BY a.designation LIMIT 15"""
-    articles = conn.execute(search_sql, [f'%{q_lower}%']*6).fetchall()
+    articles = conn.execute("""
+        SELECT a.id, a.designation, a.famille, a.stock, a.unite, a.stock_min, a.stock_alerte, c.nom as ct_nom
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.actif=1 AND (
+            a.designation LIKE ? OR a.id LIKE ? OR 
+            a.reference LIKE ? OR a.marque LIKE ? OR a.famille LIKE ?
+        ) ORDER BY a.designation LIMIT 15
+    """, [f'%{q}%']*5).fetchall()
     conn.close()
     result = []
     for a in articles:
