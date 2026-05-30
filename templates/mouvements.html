@@ -1,37 +1,100 @@
 {% extends 'base.html' %}
-{% block title %}Historique — StockETF{% endblock %}
-{% block page_title %}🔄 Historique des mouvements{% endblock %}
+{% block title %}Historique — Gestion Stock ETF RGI{% endblock %}
+{% block page_title %}🔄 Historique des activités{% endblock %}
 {% block content %}
-<div class="page-header"><h2>200 derniers mouvements</h2></div>
+
+<div class="page-header">
+  <h2>{{ mouvements|length }} mouvement(s)</h2>
+</div>
+
+<!-- Filtres -->
+<div class="card" style="margin-bottom:14px">
+  <form method="GET" class="filters">
+    <input type="text" name="q" value="{{ q }}" placeholder="🔍 Article, utilisateur...">
+    <select name="type">
+      <option value="">Tous types</option>
+      <option value="SORTIE" {% if type_filtre=='SORTIE' %}selected{% endif %}>📤 Sorties</option>
+      <option value="RECEPTION" {% if type_filtre=='RECEPTION' %}selected{% endif %}>📥 Réceptions</option>
+      <option value="TRANSFERT" {% if type_filtre=='TRANSFERT' %}selected{% endif %}>🔀 Transferts</option>
+      <option value="INVENTAIRE" {% if type_filtre=='INVENTAIRE' %}selected{% endif %}>📊 Inventaires</option>
+    </select>
+    <button type="submit" class="btn btn-navy">Filtrer</button>
+    <a href="{{ url_for('mouvements') }}" class="btn btn-outline">Reset</a>
+  </form>
+</div>
+
 <div class="card">
 <div class="table-wrap">
 <table>
-  <thead><tr><th>Date</th><th>Type</th><th>Article</th><th>Désignation</th><th>Qté</th><th>Stock avant</th><th>Stock après</th><th>Container</th><th>Chantier</th><th>Document</th></tr></thead>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Type</th>
+      <th>Article</th>
+      <th>Désignation</th>
+      <th>Qté</th>
+      <th>Stock avant</th>
+      <th>Stock après</th>
+      <th>Container</th>
+      <th>Chantier</th>
+      <th>👤 Qui</th>
+      <th>Détails</th>
+      <th>Document</th>
+    </tr>
+  </thead>
   <tbody>
   {% for m in mouvements %}
   <tr>
-    <td>{{ m['date_mouvement'] }}</td>
+    <td style="font-size:.75rem;white-space:nowrap">
+      <strong>{{ m['date_mouvement'] }}</strong>
+      {% if m['created_at'] %}
+      <br><span style="color:#aaa;font-size:.68rem">{{ m['created_at'][:16] if m['created_at'] else '' }}</span>
+      {% endif %}
+    </td>
     <td>
-      {% if m['type_mouvement']=='SORTIE' %}<span class="badge badge-critique">📤 Sortie</span>
-      {% elif m['type_mouvement']=='RECEPTION' %}<span class="badge badge-ok">📥 Récep.</span>
-      {% elif m['type_mouvement']=='TRANSFERT' %}<span class="badge badge-cours">🔀 Transfert</span>
-      {% elif m['type_mouvement']=='INVENTAIRE' %}<span class="badge" style="background:#ede9fe;color:#5b21b6">📊 Inventaire</span>
-      {% else %}<span class="badge">{{ m['type_mouvement'] }}</span>{% endif %}
+      {% if m['type_mouvement']=='SORTIE' %}
+        <span class="badge badge-critique">📤 Sortie</span>
+      {% elif m['type_mouvement']=='RECEPTION' %}
+        <span class="badge badge-ok">📥 Réception</span>
+      {% elif m['type_mouvement']=='TRANSFERT' %}
+        <span class="badge badge-cours">🔀 Transfert</span>
+      {% elif m['type_mouvement']=='INVENTAIRE' %}
+        <span class="badge" style="background:#ede9fe;color:#5b21b6">📊 Inventaire</span>
+      {% elif m['type_mouvement']=='SUPPRESSION' %}
+        <span class="badge" style="background:#fee2e2;color:#991b1b">🗑 Suppression</span>
+      {% else %}
+        <span class="badge">{{ m['type_mouvement'] }}</span>
+      {% endif %}
     </td>
     <td><code style="font-size:.72rem">{{ m['article_id'] }}</code></td>
-    <td>{{ m['designation'] or '—' }}</td>
+    <td style="font-size:.78rem;max-width:150px">{{ m['designation'] or '—' }}</td>
     <td>
-      {% if m['type_mouvement']=='SORTIE' %}<span style="color:#dc2626;font-weight:700">-{{ m['quantite'] }}</span>
-      {% else %}<span style="color:#16a34a;font-weight:700">+{{ m['quantite'] }}</span>{% endif %}
+      {% if m['type_mouvement']=='SORTIE' or m['type_mouvement']=='SUPPRESSION' %}
+        <span style="color:#dc2626;font-weight:700">-{{ m['quantite'] }}</span>
+      {% elif m['type_mouvement']=='RECEPTION' %}
+        <span style="color:#16a34a;font-weight:700">+{{ m['quantite'] }}</span>
+      {% else %}
+        <span style="font-weight:600">{{ m['quantite'] }}</span>
+      {% endif %}
     </td>
-    <td>{{ m['stock_avant'] }}</td>
-    <td><strong>{{ m['stock_apres'] }}</strong></td>
+    <td style="color:#aaa;font-size:.78rem">{{ m['stock_avant'] }}</td>
+    <td><strong style="font-size:.82rem">{{ m['stock_apres'] }}</strong></td>
     <td style="font-size:.75rem">{{ m['container_nom'] or '—' }}</td>
     <td style="font-size:.75rem">{{ m['chantier_nom'] or '—' }}</td>
-    <td><code style="font-size:.7rem;color:#E8661A">{{ m['reference_doc'] or '—' }}</code></td>
+    <td>
+      {% if m['user_nom'] %}
+      <span style="font-size:.75rem;font-weight:600;color:#1a1a2e;background:#f0f2f5;padding:2px 7px;border-radius:10px;white-space:nowrap">
+        👤 {{ m['user_nom'] }}
+      </span>
+      {% else %}
+      <span style="color:#ccc;font-size:.72rem">—</span>
+      {% endif %}
+    </td>
+    <td style="font-size:.72rem;color:#666;max-width:120px">{{ m['details'] or '—' }}</td>
+    <td><code style="font-size:.68rem;color:#E8661A">{{ m['reference_doc'] or '—' }}</code></td>
   </tr>
   {% else %}
-  <tr><td colspan="10" style="text-align:center;padding:30px;color:#888">Aucun mouvement</td></tr>
+  <tr><td colspan="12" style="text-align:center;padding:30px;color:#888">Aucun mouvement</td></tr>
   {% endfor %}
   </tbody>
 </table>
