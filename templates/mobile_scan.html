@@ -2,117 +2,244 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>📱 Scan — StockETF RGI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>📱 Scan QR — StockETF RGI</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;color:#fff}
-.card{background:#fff;color:#1a1a2e;border-radius:16px;padding:28px;width:100%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
-.logo{font-size:1.1rem;font-weight:800;color:#1a1a2e;margin-bottom:4px}
-.logo span{color:#E8661A}
-.subtitle{font-size:.78rem;color:#888;margin-bottom:24px}
-.scan-icon{font-size:4rem;margin-bottom:16px}
-h1{font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-bottom:8px}
-p{font-size:.82rem;color:#666;line-height:1.6;margin-bottom:24px}
-.btn{display:block;width:100%;padding:14px;border-radius:10px;font-size:.95rem;font-weight:700;border:none;cursor:pointer;text-decoration:none;margin-bottom:12px;transition:.15s}
-.btn-orange{background:#E8661A;color:#fff}
-.btn-orange:hover{background:#c85510}
-.btn-outline{background:#f5f5f5;color:#333;border:1px solid #ddd}
-.btn-outline:hover{background:#e8e8e8}
-.search-section{margin-top:8px;padding-top:20px;border-top:1px solid #f0f0f0}
-.search-input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:.88rem;margin-bottom:10px}
-.search-input:focus{outline:none;border-color:#E8661A}
-.info{background:#f0f9ff;border-radius:8px;padding:12px;font-size:.75rem;color:#0369a1;margin-top:16px;text-align:left}
+body{font-family:'Segoe UI',sans-serif;background:#000;min-height:100vh;overflow:hidden;color:#fff}
+
+/* Caméra plein écran */
+#video{width:100vw;height:100vh;object-fit:cover;position:fixed;top:0;left:0;z-index:1}
+#canvas{display:none}
+
+/* Overlay UI */
+.overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2;pointer-events:none}
+
+/* Cadre de scan au centre */
+.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);width:240px;height:240px}
+.scan-corner{position:absolute;width:30px;height:30px;border-color:#E8661A;border-style:solid}
+.scan-corner.tl{top:0;left:0;border-width:4px 0 0 4px;border-radius:4px 0 0 4px}
+.scan-corner.tr{top:0;right:0;border-width:4px 4px 0 0;border-radius:0 4px 0 0}
+.scan-corner.bl{bottom:0;left:0;border-width:0 0 4px 4px;border-radius:0 0 0 4px}
+.scan-corner.br{bottom:0;right:0;border-width:0 4px 4px 0;border-radius:0 0 4px 0}
+
+/* Ligne de scan animée */
+.scan-line{position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#E8661A,transparent);animation:scanAnim 2s linear infinite;top:20px}
+@keyframes scanAnim{0%{top:10px;opacity:1}50%{opacity:1}100%{top:220px;opacity:0.3}}
+
+/* Zone sombre autour du cadre */
+.dark-top{position:absolute;top:0;left:0;right:0;height:calc(50% - 120px - 60px);background:rgba(0,0,0,.6)}
+.dark-bottom{position:absolute;bottom:0;left:0;right:0;height:calc(50% - 120px + 60px);background:rgba(0,0,0,.6)}
+.dark-left{position:absolute;top:calc(50% - 120px - 60px);left:0;width:calc(50% - 120px);bottom:calc(50% - 120px + 60px);background:rgba(0,0,0,.6)}
+.dark-right{position:absolute;top:calc(50% - 120px - 60px);right:0;width:calc(50% - 120px);bottom:calc(50% - 120px + 60px);background:rgba(0,0,0,.6)}
+
+/* Header */
+.header{position:fixed;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.8),transparent);padding:16px;display:flex;align-items:center;justify-content:space-between;pointer-events:all}
+.logo{font-size:.88rem;font-weight:800;color:#fff}.logo span{color:#E8661A}
+.btn-back{color:rgba(255,255,255,.8);font-size:.8rem;text-decoration:none;background:rgba(255,255,255,.1);padding:6px 12px;border-radius:20px;backdrop-filter:blur(10px)}
+
+/* Instructions */
+.instructions{position:fixed;top:50%;left:50%;transform:translate(-50%,80px);z-index:10;text-align:center;pointer-events:none}
+.instructions p{font-size:.82rem;color:rgba(255,255,255,.8);background:rgba(0,0,0,.5);padding:8px 16px;border-radius:20px;backdrop-filter:blur(10px)}
+
+/* Footer avec recherche manuelle */
+.footer{position:fixed;bottom:0;left:0;right:0;z-index:10;background:linear-gradient(to top,rgba(0,0,0,.9),transparent);padding:20px 16px 30px;pointer-events:all}
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-input{flex:1;padding:11px 14px;border-radius:25px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:.88rem;backdrop-filter:blur(10px)}
+.search-input::placeholder{color:rgba(255,255,255,.5)}
+.search-input:focus{outline:none;background:rgba(255,255,255,.25)}
+.search-btn{padding:11px 16px;background:#E8661A;border:none;border-radius:25px;color:#fff;font-size:.88rem;font-weight:700;cursor:pointer}
+.search-results{max-height:180px;overflow-y:auto}
+.result-item{display:block;padding:10px 14px;background:rgba(255,255,255,.1);border-radius:10px;margin-bottom:6px;text-decoration:none;color:#fff;backdrop-filter:blur(10px);border-left:3px solid #E8661A}
+.result-item:active{background:rgba(255,255,255,.2)}
+.result-name{font-size:.82rem;font-weight:600}
+.result-info{font-size:.72rem;color:rgba(255,255,255,.6);margin-top:2px}
+
+/* Message erreur caméra */
+.cam-error{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;text-align:center;background:rgba(0,0,0,.85);padding:24px;border-radius:16px;width:85%;max-width:340px;pointer-events:all}
+.cam-error h2{font-size:.95rem;font-weight:700;margin-bottom:8px;color:#E8661A}
+.cam-error p{font-size:.78rem;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:16px}
+
+/* Toast notification */
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:20;background:#E8661A;color:#fff;padding:10px 20px;border-radius:25px;font-size:.82rem;font-weight:600;display:none;white-space:nowrap}
+.toast.show{display:block;animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;top:60px}to{opacity:1;top:80px}}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">📦 Stock<span>ETF RGI</span></div>
-  <div class="subtitle">Base arrière ETF Dense</div>
+
+<!-- Caméra -->
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<!-- Overlay sombre autour du cadre -->
+<div class="overlay">
+  <div class="dark-top"></div>
+  <div class="dark-bottom"></div>
+  <div class="dark-left"></div>
+  <div class="dark-right"></div>
   
-  <div class="scan-icon">📱</div>
-  <h1>Mode Scan Terrain</h1>
-  <p>Scannez le QR code d'un article pour faire une sortie rapide depuis votre téléphone.</p>
-  
-  <!-- Bouton scan QR (ouvre la caméra sur mobile) -->
-  <a href="#" onclick="startScan()" class="btn btn-orange">
-    📷 Scanner un QR Code
-  </a>
-  
-  <!-- Recherche manuelle -->
-  <div class="search-section">
-    <p style="margin-bottom:12px;font-size:.8rem">Ou recherchez manuellement :</p>
-    <input type="text" class="search-input" id="search-input" 
-           placeholder="Ex: ART-001 ou GANT..." 
-           oninput="rechercheArticle(this.value)">
-    <div id="search-results"></div>
+  <!-- Cadre de scan -->
+  <div class="scan-frame">
+    <div class="scan-corner tl"></div>
+    <div class="scan-corner tr"></div>
+    <div class="scan-corner bl"></div>
+    <div class="scan-corner br"></div>
+    <div class="scan-line"></div>
   </div>
-  
-  <div class="info">
-    💡 Pour scanner : pointez la caméra vers le QR code affiché sur l'étagère
-  </div>
-  
-  <a href="/" class="btn btn-outline" style="margin-top:16px">⬅️ Retour application</a>
 </div>
 
-<script>
-function startScan() {
-  // Ouvrir le scanner QR via l'API caméra du navigateur
-  // Sur mobile, ça ouvre directement la caméra
-  if ('BarcodeDetector' in window) {
-    // API native si disponible
-    scanWithBarcodeDetector();
-  } else {
-    // Fallback : demander à l'utilisateur de taper l'URL du QR
-    var code = prompt('Entrez le code article (ex: ART-001) :');
-    if (code && code.trim()) {
-      window.location.href = '/scan/article/' + code.trim().toUpperCase();
-    }
-  }
-}
+<!-- Header -->
+<div class="header">
+  <div class="logo">📦 Stock<span>ETF RGI</span></div>
+  <a href="/" class="btn-back">✕ Fermer</a>
+</div>
 
-async function scanWithBarcodeDetector() {
+<!-- Instructions -->
+<div class="instructions">
+  <p id="scan-status">📷 Pointez vers un QR code</p>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">QR Code détecté !</div>
+
+<!-- Footer recherche manuelle -->
+<div class="footer">
+  <div class="search-bar">
+    <input type="text" class="search-input" id="search-input" 
+           placeholder="🔍 Ou tapez un article..." 
+           oninput="rechercheArticle(this.value)"
+           autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="search-results" id="search-results"></div>
+</div>
+
+<!-- Message si caméra non disponible -->
+<div class="cam-error" id="cam-error" style="display:none">
+  <h2>📷 Caméra non disponible</h2>
+  <p>Autorisez l'accès à la caméra dans votre navigateur, ou utilisez la recherche ci-dessous.</p>
+  <p style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:8px">Sur iPhone : Safari uniquement. Sur Android : Chrome recommandé.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<script>
+var video = document.getElementById('video');
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+var scanning = true;
+var scanInterval;
+
+// Démarrer la caméra automatiquement
+async function startCamera() {
   try {
-    const detector = new BarcodeDetector({formats: ['qr_code']});
-    const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
-    // Créer une vidéo temporaire pour scanner
-    const video = document.createElement('video');
+    var constraints = {
+      video: {
+        facingMode: { ideal: 'environment' }, // Caméra arrière
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    };
+    
+    var stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
     video.play();
     
-    const interval = setInterval(async () => {
-      const barcodes = await detector.detect(video);
-      if (barcodes.length > 0) {
-        clearInterval(interval);
-        stream.getTracks().forEach(t => t.stop());
-        window.location.href = barcodes[0].rawValue;
-      }
-    }, 500);
-  } catch(e) {
-    alert('Scanner non disponible — entrez le code manuellement');
+    video.onloadedmetadata = function() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      startScanning();
+    };
+    
+  } catch(err) {
+    console.error('Caméra:', err);
+    document.getElementById('cam-error').style.display = 'block';
+    document.getElementById('scan-status').textContent = '⌨️ Utilisez la recherche ci-dessous';
+    // Fond noir au lieu de caméra
+    document.body.style.background = '#1a1a2e';
   }
 }
 
-let searchTimer;
+// Scanner les QR codes en continu
+function startScanning() {
+  scanInterval = setInterval(function() {
+    if (!scanning) return;
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert'
+    });
+    
+    if (code) {
+      scanning = false;
+      clearInterval(scanInterval);
+      
+      // QR code détecté !
+      showToast('✅ QR Code détecté !');
+      
+      // Naviguer vers l'URL du QR code
+      setTimeout(function() {
+        var url = code.data;
+        // Si c'est une URL de notre app, naviguer directement
+        if (url.includes('/scan/article/')) {
+          window.location.href = url;
+        } else if (url.startsWith('ART-')) {
+          // Si c'est juste un ID article
+          window.location.href = '/scan/article/' + url;
+        } else {
+          // Essayer de naviguer vers l'URL
+          window.location.href = url;
+        }
+      }, 500);
+    }
+  }, 200); // Scanner 5 fois par seconde
+}
+
+function showToast(msg) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 2000);
+}
+
+// Recherche manuelle
+var searchTimer;
 function rechercheArticle(q) {
   clearTimeout(searchTimer);
-  if (q.length < 2) { document.getElementById('search-results').innerHTML = ''; return; }
+  var results = document.getElementById('search-results');
+  if (q.length < 2) { results.innerHTML = ''; return; }
+  
   searchTimer = setTimeout(function() {
     fetch('/api/recherche-articles?q=' + encodeURIComponent(q))
-      .then(r => r.json())
-      .then(data => {
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
         var html = '';
-        data.slice(0,5).forEach(function(a) {
-          var color = a.stock==0?'#dc2626':a.stock<5?'#d97706':'#16a34a';
-          html += '<a href="/scan/article/'+a.id+'" style="display:block;padding:10px;background:#f8f9fa;border-radius:8px;margin-bottom:6px;text-decoration:none;color:#1a1a2e;border-left:3px solid '+color+'">'
-                + '<strong style="font-size:.82rem">'+a.designation+'</strong>'
-                + '<br><span style="font-size:.72rem;color:#888">'+a.id+' — 📦 '+a.container+' — Stock: <strong style="color:'+color+'">'+a.stock+' '+a.unite+'</strong></span>'
+        data.slice(0, 5).forEach(function(a) {
+          var stockColor = a.stock==0 ? '#dc2626' : a.stock<5 ? '#d97706' : '#16a34a';
+          html += '<a href="/scan/article/'+a.id+'" class="result-item">'
+                + '<div class="result-name">'+a.designation+'</div>'
+                + '<div class="result-info">'+a.id+' — 📦 '+a.container
+                + ' — <span style="color:'+stockColor+';font-weight:700">'+a.stock+' '+a.unite+'</span></div>'
                 + '</a>';
         });
-        if (!data.length) html = '<p style="font-size:.78rem;color:#888;text-align:center">Aucun résultat</p>';
-        document.getElementById('search-results').innerHTML = html;
+        if (!data.length) {
+          html = '<div style="text-align:center;font-size:.78rem;color:rgba(255,255,255,.4);padding:10px">Aucun résultat</div>';
+        }
+        results.innerHTML = html;
+      })
+      .catch(function() {
+        results.innerHTML = '';
       });
   }, 300);
+}
+
+// Démarrer la caméra au chargement
+startCamera();
+
+// Empêcher la mise en veille sur mobile (si supporté)
+if ('wakeLock' in navigator) {
+  navigator.wakeLock.request('screen').catch(function() {});
 }
 </script>
 </body>
