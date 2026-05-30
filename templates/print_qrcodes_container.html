@@ -59,9 +59,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;padding:20px}
   <div class="art-info">📍 {{ a['emplacement'] }}</div>
   {% endif %}
   <div class="art-info">{{ a['famille'] }}</div>
-  <div class="art-stock {% if a['stock'] == 0 %}stock-bad{% elif a['stock'] <= a['stock_min'] %}stock-warn{% else %}stock-ok{% endif %}">
-    {{ a['stock'] }} {{ a['unite'] }}
-  </div>
 </div>
 {% endfor %}
 </div>

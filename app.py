@@ -2296,5 +2296,64 @@ def qrcodes_container(container_id):
     from flask import request as req
     base_url = req.host_url.rstrip('/')
     return render_template('print_qrcodes_container.html', ct=ct, articles=articles, base_url=base_url)
+
+@app.route('/scan/reception/<id>')
+@login_required
+def scan_reception(id):
+    """Fiche réception article après scan QR — vue mobile."""
+    conn = get_db()
+    article = conn.execute("""SELECT a.*, c.nom as container_nom, c.code as container_code
+        FROM articles a LEFT JOIN containers c ON a.container_id=c.id
+        WHERE a.id=? AND a.actif=1""",(id,)).fetchone()
+    fournisseurs = conn.execute("SELECT nom FROM fournisseurs WHERE actif=1 ORDER BY nom").fetchall()
+    conn.close()
+    if not article:
+        return render_template('mobile_article_not_found.html', id=id)
+    return render_template('mobile_reception.html', article=article, fournisseurs=fournisseurs)
+
+@app.route('/scan/valider-reception/<id>', methods=['POST'])
+@login_required
+def scan_valider_reception(id):
+    """Valider une réception depuis le scan mobile."""
+    conn = get_db()
+    article = conn.execute("SELECT * FROM articles WHERE id=? AND actif=1",(id,)).fetchone()
+    if not article:
+        conn.close()
+        return render_template('mobile_erreur.html', msg="Article introuvable")
+    
+    quantite = int(request.form.get('quantite', 1))
+    fournisseur = request.form.get('fournisseur', '')
+    
+    if quantite <= 0:
+        conn.close()
+        return render_template('mobile_erreur.html', msg="Quantité invalide")
+    
+    from datetime import date as dt
+    numero = get_next_numero('bons_reception','numero','BR-')
+    s_avant = article['stock']
+    s_apres = s_avant + quantite
+    
+    conn.execute("""INSERT INTO bons_reception
+        (numero,date_reception,fournisseur,num_bl,article_id,qte_commandee,
+         qte_recue,prix_unitaire,commentaire,created_by)
+        VALUES (?,?,?,?,?,?,?,?,?,?)""",(
+        numero, dt.today().isoformat(),
+        fournisseur, '',
+        id, 0, quantite, article['prix_achat'],
+        'Réception via scan mobile', session.get('user_id'),
+    ))
+    conn.execute("UPDATE articles SET stock=? WHERE id=?",(s_apres, id))
+    conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
+        quantite,reference_doc,stock_avant,stock_apres,container_id)
+        VALUES (?,?,?,?,?,?,?,?)""",(
+        dt.today().isoformat(),'RECEPTION',id,quantite,numero,
+        s_avant,s_apres,article['container_id']
+    ))
+    conn.commit()
+    conn.close()
+    
+    return render_template('mobile_succes_reception.html',
+        article=article, quantite=quantite,
+        nouveau_stock=s_apres, numero=numero)
 if __name__ == '__main__':
     app.run(debug=False)

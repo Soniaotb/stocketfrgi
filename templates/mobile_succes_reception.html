@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✅ Réception validée</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f0fdf4;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.icon{font-size:4rem;margin-bottom:16px}
+h1{font-size:1.2rem;font-weight:800;color:#16a34a;margin-bottom:8px}
+.bon{font-size:.85rem;color:#888;margin-bottom:20px}
+.bon strong{color:#16a34a;font-size:1rem}
+.info-box{background:#f8f9fa;border-radius:10px;padding:16px;margin-bottom:20px;text-align:left}
+.info-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem;border-bottom:1px solid #f0f0f0}
+.info-row:last-child{border-bottom:none}
+.info-row .label{color:#888}
+.info-row .val{font-weight:700;color:#1a1a2e}
+.btn{display:block;width:100%;padding:14px;border-radius:10px;font-size:.92rem;font-weight:700;border:none;cursor:pointer;text-decoration:none;margin-bottom:10px;text-align:center}
+.btn-green{background:#16a34a;color:#fff}
+.btn-orange{background:#E8661A;color:#fff}
+.btn-outline{background:#f5f5f5;color:#333;border:1px solid #ddd}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">✅</div>
+  <h1>Réception validée !</h1>
+  <div class="bon">Bon de réception : <strong>{{ numero }}</strong></div>
+  
+  <div class="info-box">
+    <div class="info-row"><span class="label">Article</span><span class="val">{{ article['id'] }}</span></div>
+    <div class="info-row"><span class="label">Désignation</span><span class="val" style="font-size:.78rem">{{ article['designation'][:30] }}</span></div>
+    <div class="info-row"><span class="label">Quantité reçue</span><span class="val" style="color:#16a34a">+{{ quantite }} {{ article['unite'] }}</span></div>
+    <div class="info-row"><span class="label">Nouveau stock</span>
+      <span class="val" style="color:#16a34a;font-size:1.1rem">{{ nouveau_stock }} {{ article['unite'] }}</span>
+    </div>
+  </div>
+  
+  <a href="/scan/reception/{{ article['id'] }}" class="btn btn-green">
+    📥 Nouvelle réception même article
+  </a>
+  <a href="/scan" class="btn btn-orange">
+    📱 Scanner autre article
+  </a>
+  <a href="/" class="btn btn-outline">
+    🏠 Application principale
+  </a>
+</div>
+</body>
+</html>
