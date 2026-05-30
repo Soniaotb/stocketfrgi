@@ -127,6 +127,21 @@ def get_etat_stock(stock, stock_min, stock_alerte):
     elif stock <= stock_alerte: return 'ALERTE'
     else: return 'OK'
 
+def log_mouvement(conn, type_mv, article_id, quantite, ref_doc, 
+                  stock_avant, stock_apres, container_id=0, chantier_id=0, details=''):
+    """Enregistrer un mouvement avec infos utilisateur."""
+    from flask import session as sess
+    user_id = sess.get('user_id', 0) or 0
+    user_nom = sess.get('user_nom', '') or ''
+    conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
+        quantite,reference_doc,stock_avant,stock_apres,container_id,chantier_id,
+        user_id,user_nom,details)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", (
+        date.today().isoformat(), type_mv, article_id, quantite, ref_doc,
+        stock_avant, stock_apres, container_id or 0, chantier_id or 0,
+        user_id, user_nom, details
+    ))
+
 def get_next_numero(table, col, prefix):
     conn = get_db()
     row = conn.execute(f"SELECT {col} FROM {table} ORDER BY id DESC LIMIT 1").fetchone()
@@ -275,7 +290,9 @@ def init_db():
         type_mouvement TEXT NOT NULL, article_id TEXT NOT NULL, quantite INTEGER NOT NULL,
         reference_doc TEXT DEFAULT '', stock_avant INTEGER DEFAULT 0,
         stock_apres INTEGER DEFAULT 0, container_id INTEGER DEFAULT 0,
-        chantier_id INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        chantier_id INTEGER DEFAULT 0, user_id INTEGER DEFAULT 0,
+        user_nom TEXT DEFAULT '', details TEXT DEFAULT '',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS fournisseurs (
         id TEXT PRIMARY KEY, nom TEXT NOT NULL, contact TEXT DEFAULT '',
@@ -1147,12 +1164,9 @@ def nouveau_transfert():
             request.form.get('commentaire',''), session.get('user_id'),
         ))
         conn.execute("UPDATE articles SET container_id=? WHERE id=?",(dst, article_id))
-        conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
-            quantite,reference_doc,stock_avant,stock_apres,container_id)
-            VALUES (?,?,?,?,?,?,?,?)""",(
-            date.today().isoformat(),'TRANSFERT',article_id,qte,numero,
-            article['stock'],article['stock'],dst
-        ))
+        log_mouvement(conn,'TRANSFERT',article_id,qte,numero,
+            article['stock'],article['stock'],dst,0,
+            f"De container {src} vers {dst}")
         conn.commit(); conn.close()
         flash(f'Transfert {numero} effectué','success')
         return redirect(url_for('transferts'))
@@ -1643,12 +1657,9 @@ def nouvel_inventaire():
         ))
         if request.form.get('appliquer') == '1':
             conn.execute("UPDATE articles SET stock=? WHERE id=?",(stock_reel,article_id))
-            conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
-                quantite,reference_doc,stock_avant,stock_apres,container_id)
-                VALUES (?,?,?,?,?,?,?,?)""",(
-                date.today().isoformat(),'INVENTAIRE',article_id,abs(ecart),numero,
-                stock_theorique,stock_reel,article['container_id']
-            ))
+            log_mouvement(conn,'INVENTAIRE',article_id,abs(ecart),numero,
+                stock_theorique,stock_reel,article['container_id'],0,
+                f"Inventaire — écart {ecart:+d}")
         conn.commit(); conn.close()
         flash(f'Inventaire {numero} enregistré — Écart : {ecart:+d}','success')
         return redirect(url_for('inventaire'))
@@ -1665,14 +1676,25 @@ def nouvel_inventaire():
 @login_required
 def mouvements():
     conn = get_db()
-    mvts = conn.execute("""SELECT m.*, a.designation, c.nom as container_nom,
+    q = request.args.get('q','')
+    type_filtre = request.args.get('type','')
+    sql = """SELECT m.*, a.designation, c.nom as container_nom,
         ch.nom as chantier_nom FROM mouvements m
         LEFT JOIN articles a ON m.article_id=a.id
         LEFT JOIN containers c ON m.container_id=c.id
         LEFT JOIN chantiers ch ON m.chantier_id=ch.id
-        ORDER BY m.id DESC LIMIT 200""").fetchall()
+        WHERE 1=1"""
+    params = []
+    if q:
+        sql += " AND (LOWER(a.designation) LIKE ? OR LOWER(m.article_id) LIKE ? OR LOWER(m.user_nom) LIKE ?)"
+        params += [f'%{q.lower()}%']*3
+    if type_filtre:
+        sql += " AND m.type_mouvement=?"
+        params.append(type_filtre)
+    sql += " ORDER BY m.id DESC LIMIT 500"
+    mvts = conn.execute(sql, params).fetchall()
     conn.close()
-    return render_template('mouvements.html', mouvements=mvts)
+    return render_template('mouvements.html', mouvements=mvts, q=q, type_filtre=type_filtre)
 
 # ─── ANALYTICS ────────────────────────────────────────────────────────────────
 
@@ -2249,12 +2271,9 @@ def scan_sortie(id):
     conn.execute("INSERT INTO bons_sortie_lignes (bon_id,article_id,quantite,prix_achat) VALUES (?,?,?,?)",
         (bon_id, id, quantite, article['prix_achat']))
     conn.execute("UPDATE articles SET stock=? WHERE id=?",(s_apres, id))
-    conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
-        quantite,reference_doc,stock_avant,stock_apres,container_id,chantier_id)
-        VALUES (?,?,?,?,?,?,?,?,?)""",(
-        dt.today().isoformat(),'SORTIE',id,quantite,numero,
-        s_avant,s_apres,article['container_id'],chantier_id
-    ))
+    log_mouvement(conn,'SORTIE',id,quantite,numero,
+        s_avant,s_apres,article['container_id'],chantier_id,
+        f"Scan mobile — {demandeur}")
     conn.commit()
     conn.close()
     
@@ -2343,12 +2362,9 @@ def scan_valider_reception(id):
         'Réception via scan mobile', session.get('user_id'),
     ))
     conn.execute("UPDATE articles SET stock=? WHERE id=?",(s_apres, id))
-    conn.execute("""INSERT INTO mouvements (date_mouvement,type_mouvement,article_id,
-        quantite,reference_doc,stock_avant,stock_apres,container_id)
-        VALUES (?,?,?,?,?,?,?,?)""",(
-        dt.today().isoformat(),'RECEPTION',id,quantite,numero,
-        s_avant,s_apres,article['container_id']
-    ))
+    log_mouvement(conn,'RECEPTION',id,quantite,numero,
+        s_avant,s_apres,article['container_id'],0,
+        f"Scan mobile — {fournisseur}")
     conn.commit()
     conn.close()
     
