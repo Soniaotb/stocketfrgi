@@ -6,213 +6,208 @@
 <title>📱 Scan QR — StockETF RGI</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#000;min-height:100vh;overflow:hidden;color:#fff}
-#video{width:100vw;height:100vh;object-fit:cover;position:fixed;top:0;left:0;z-index:1}
-#canvas{display:none}
-.overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2;pointer-events:none}
-.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-65%);width:230px;height:230px}
-.scan-corner{position:absolute;width:28px;height:28px;border-color:#E8661A;border-style:solid}
-.scan-corner.tl{top:0;left:0;border-width:4px 0 0 4px}
-.scan-corner.tr{top:0;right:0;border-width:4px 4px 0 0}
-.scan-corner.bl{bottom:0;left:0;border-width:0 0 4px 4px}
-.scan-corner.br{bottom:0;right:0;border-width:0 4px 4px 0}
-.scan-line{position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#E8661A,transparent);animation:scanAnim 2s linear infinite}
-@keyframes scanAnim{0%{top:10px}100%{top:215px}}
-.dark-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-.scan-hole{position:absolute;top:50%;left:50%;transform:translate(-50%,-65%);width:230px;height:230px;background:transparent;box-shadow:0 0 0 2000px rgba(0,0,0,.55)}
+body{font-family:'Segoe UI',sans-serif;background:#1a1a2e;min-height:100vh;color:#fff;overflow-x:hidden}
 
-.header{position:fixed;top:0;left:0;right:0;z-index:10;background:linear-gradient(to bottom,rgba(0,0,0,.85),transparent);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;pointer-events:all}
+.header{background:rgba(0,0,0,.85);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .logo{font-size:.88rem;font-weight:800}.logo span{color:#E8661A}
 .btn-back{color:rgba(255,255,255,.8);font-size:.78rem;text-decoration:none;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:20px}
 
-.mode-btns{position:fixed;top:50%;left:50%;transform:translate(-50%,60px);z-index:10;display:flex;gap:10px;pointer-events:all}
-.mode-btn{padding:10px 20px;border:2px solid rgba(255,255,255,.3);border-radius:25px;font-size:.82rem;font-weight:700;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;backdrop-filter:blur(10px);transition:.2s}
-.mode-btn.active{background:#E8661A;border-color:#E8661A}
-.mode-btn.reception.active{background:#16a34a;border-color:#16a34a}
+/* Mode buttons */
+.mode-bar{display:flex;gap:0;background:rgba(255,255,255,.08);border-radius:12px;margin:14px 16px;overflow:hidden}
+.mode-btn{flex:1;padding:12px;font-size:.85rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,.6);transition:.2s}
+.mode-btn.active-sortie{background:#E8661A;color:#fff;border-radius:12px}
+.mode-btn.active-reception{background:#16a34a;color:#fff;border-radius:12px}
 
-.scan-label{position:fixed;top:50%;left:50%;transform:translate(-50%,120px);z-index:10;text-align:center;pointer-events:none}
-.scan-label p{font-size:.78rem;color:rgba(255,255,255,.75);background:rgba(0,0,0,.45);padding:7px 16px;border-radius:20px;backdrop-filter:blur(8px)}
+/* Scanner container */
+.scanner-wrap{position:relative;margin:0 16px;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:1}
+#reader{width:100%}
 
-.footer{position:fixed;bottom:0;left:0;right:0;z-index:10;background:linear-gradient(to top,rgba(0,0,0,.92),transparent);padding:16px 16px 28px;pointer-events:all}
-.search-bar{display:flex;gap:8px;margin-bottom:10px}
-.search-input{flex:1;padding:11px 14px;border-radius:25px;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:.88rem;backdrop-filter:blur(10px)}
-.search-input::placeholder{color:rgba(255,255,255,.45)}
-.search-input:focus{outline:none;background:rgba(255,255,255,.22)}
-.search-results{max-height:160px;overflow-y:auto}
-.result-item{display:block;padding:10px 12px;background:rgba(255,255,255,.1);border-radius:10px;margin-bottom:5px;text-decoration:none;color:#fff;backdrop-filter:blur(10px)}
+/* Overlay cadre */
+.scan-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.scan-frame{width:65%;aspect-ratio:1;position:relative}
+.corner{position:absolute;width:24px;height:24px;border-color:#E8661A;border-style:solid}
+.corner.tl{top:0;left:0;border-width:3px 0 0 3px}
+.corner.tr{top:0;right:0;border-width:3px 3px 0 0}
+.corner.bl{bottom:0;left:0;border-width:0 0 3px 3px}
+.corner.br{bottom:0;right:0;border-width:0 3px 3px 0}
+.scan-line-anim{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#E8661A,transparent);animation:scan 2s linear infinite}
+@keyframes scan{0%{top:5%}100%{top:95%}}
+
+.status{text-align:center;padding:10px 16px;font-size:.8rem;color:rgba(255,255,255,.7)}
+.status.success{color:#16a34a;font-weight:700}
+.status.error{color:#dc2626}
+
+/* Recherche manuelle */
+.search-section{margin:14px 16px}
+.search-label{font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:8px;text-align:center}
+.search-bar{display:flex;gap:8px}
+.search-input{flex:1;padding:11px 14px;border-radius:25px;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:.88rem}
+.search-input::placeholder{color:rgba(255,255,255,.4)}
+.search-input:focus{outline:none;background:rgba(255,255,255,.2)}
+.results{margin-top:10px;max-height:200px;overflow-y:auto}
+.result-item{display:block;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:10px;margin-bottom:6px;text-decoration:none;color:#fff}
 .result-item.sortie{border-left:3px solid #E8661A}
 .result-item.reception{border-left:3px solid #16a34a}
-.result-name{font-size:.8rem;font-weight:600}
-.result-info{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:2px}
+.result-name{font-size:.82rem;font-weight:600}
+.result-info{font-size:.7rem;color:rgba(255,255,255,.5);margin-top:2px}
 
-.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:20;padding:10px 20px;border-radius:25px;font-size:.82rem;font-weight:700;display:none;white-space:nowrap}
-.toast.sortie{background:#E8661A;color:#fff}
-.toast.reception{background:#16a34a;color:#fff}
-.toast.show{display:block}
-
-.cam-error{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;text-align:center;background:rgba(0,0,0,.88);padding:24px;border-radius:16px;width:85%;max-width:320px;pointer-events:all}
-.cam-error h2{font-size:.92rem;font-weight:700;margin-bottom:8px;color:#E8661A}
-.cam-error p{font-size:.76rem;color:rgba(255,255,255,.65);line-height:1.5}
+.tip{margin:12px 16px;background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;color:rgba(255,255,255,.5);line-height:1.6;text-align:center}
 </style>
 </head>
 <body>
-
-<video id="video" autoplay playsinline muted></video>
-<canvas id="canvas"></canvas>
-
-<div class="overlay">
-  <div class="scan-hole"></div>
-  <div class="scan-frame">
-    <div class="scan-corner tl"></div>
-    <div class="scan-corner tr"></div>
-    <div class="scan-corner bl"></div>
-    <div class="scan-corner br"></div>
-    <div class="scan-line"></div>
-  </div>
-</div>
 
 <div class="header">
   <div class="logo">📦 Stock<span>ETF RGI</span></div>
   <a href="/" class="btn-back">✕ Fermer</a>
 </div>
 
-<!-- Boutons mode SORTIE / ENTRÉE -->
-<div class="mode-btns">
-  <button class="mode-btn active" id="btn-sortie" onclick="setMode('sortie')">📤 Sortie</button>
-  <button class="mode-btn reception" id="btn-reception" onclick="setMode('reception')">📥 Entrée</button>
+<!-- Mode sortie / entrée -->
+<div class="mode-bar">
+  <button class="mode-btn active-sortie" id="btn-sortie" onclick="setMode('sortie')">📤 Sortie stock</button>
+  <button class="mode-btn" id="btn-reception" onclick="setMode('reception')">📥 Entrée stock</button>
 </div>
 
-<div class="scan-label">
-  <p id="scan-status">Pointez vers un QR code</p>
+<!-- Scanner -->
+<div class="scanner-wrap">
+  <div id="reader"></div>
+  <div class="scan-overlay">
+    <div class="scan-frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="scan-line-anim"></div>
+    </div>
+  </div>
 </div>
 
-<div class="toast" id="toast">QR Code détecté !</div>
+<div class="status" id="status">📷 Pointez la caméra vers un QR code</div>
 
-<div class="footer">
+<!-- Recherche manuelle -->
+<div class="search-section">
+  <div class="search-label">— Ou recherchez manuellement —</div>
   <div class="search-bar">
     <input type="text" class="search-input" id="search-input"
-           placeholder="🔍 Ou tapez un article..."
+           placeholder="🔍 Tapez un article..."
            oninput="rechercheArticle(this.value)"
            autocomplete="off" autocorrect="off" spellcheck="false">
   </div>
-  <div class="search-results" id="search-results"></div>
+  <div class="results" id="results"></div>
 </div>
 
-<div class="cam-error" id="cam-error" style="display:none">
-  <h2>📷 Caméra non disponible</h2>
-  <p>Autorisez l'accès à la caméra, ou utilisez la recherche ci-dessous.</p>
-  <p style="font-size:.7rem;color:rgba(255,255,255,.35);margin-top:8px">iPhone : Safari uniquement · Android : Chrome</p>
+<div class="tip">
+  💡 Sur Android Chrome : assurez-vous d'avoir autorisé la caméra.<br>
+  Tenez le téléphone stable à 15-20 cm du QR code.
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<!-- Html5-QRCode — bien plus puissant que jsQR sur Android -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
-var video = document.getElementById('video');
-var canvas = document.getElementById('canvas');
-var ctx = canvas.getContext('2d');
-var scanning = true;
-var currentMode = 'sortie'; // 'sortie' ou 'reception'
+var currentMode = 'sortie';
+var scanner = null;
+var scanned = false;
 
 function setMode(mode) {
   currentMode = mode;
-  document.getElementById('btn-sortie').classList.toggle('active', mode==='sortie');
-  document.getElementById('btn-reception').classList.toggle('active', mode==='reception');
-  var status = document.getElementById('scan-status');
-  if (mode === 'sortie') {
-    status.textContent = '📤 Mode SORTIE — Pointez vers un QR code';
-  } else {
-    status.textContent = '📥 Mode ENTRÉE — Pointez vers un QR code';
-  }
-  // Relancer le scan
-  scanning = true;
+  var btnS = document.getElementById('btn-sortie');
+  var btnR = document.getElementById('btn-reception');
+  btnS.className = 'mode-btn' + (mode==='sortie' ? ' active-sortie' : '');
+  btnR.className = 'mode-btn' + (mode==='reception' ? ' active-reception' : '');
+  // Mettre à jour les résultats de recherche
+  rechercheArticle(document.getElementById('search-input').value);
 }
 
-async function startCamera() {
-  try {
-    var stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    video.srcObject = stream;
-    video.play();
-    video.onloadedmetadata = function() {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      startScanning();
-    };
-  } catch(err) {
-    document.getElementById('cam-error').style.display = 'block';
-    document.getElementById('scan-status').textContent = '⌨️ Utilisez la recherche ci-dessous';
-    document.body.style.background = '#1a1a2e';
-  }
-}
-
-function startScanning() {
-  setInterval(function() {
-    if (!scanning) return;
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert'
-    });
-    if (code) {
-      scanning = false;
-      var type = currentMode === 'sortie' ? 'sortie' : 'reception';
-      showToast(currentMode === 'sortie' ? '📤 Sortie détectée !' : '📥 Entrée détectée !', type);
-      setTimeout(function() {
-        var url = code.data;
-        // Adapter l'URL selon le mode
-        if (url.includes('/scan/article/')) {
-          var artId = url.split('/scan/article/')[1];
-          if (currentMode === 'reception') {
-            window.location.href = '/scan/reception/' + artId;
-          } else {
-            window.location.href = url;
-          }
-        } else if (url.startsWith('ART-') || url.match(/^ART-\d+/)) {
-          var dest = currentMode === 'sortie' ? '/scan/article/' : '/scan/reception/';
-          window.location.href = dest + url.trim();
-        } else {
-          window.location.href = url;
-        }
-      }, 600);
+function onScanSuccess(decodedText) {
+  if (scanned) return;
+  scanned = true;
+  
+  document.getElementById('status').textContent = '✅ QR Code lu !';
+  document.getElementById('status').className = 'status success';
+  
+  // Vibration sur Android
+  if (navigator.vibrate) navigator.vibrate(200);
+  
+  // Arrêter le scanner
+  if (scanner) scanner.stop();
+  
+  setTimeout(function() {
+    var url = decodedText;
+    if (url.includes('/scan/article/')) {
+      var artId = url.split('/scan/article/')[1].split('?')[0].split('/')[0];
+      if (currentMode === 'reception') {
+        window.location.href = '/scan/reception/' + artId;
+      } else {
+        window.location.href = '/scan/article/' + artId;
+      }
+    } else if (url.match(/ART-\d+/)) {
+      var match = url.match(/ART-\d+/);
+      var dest = currentMode === 'sortie' ? '/scan/article/' : '/scan/reception/';
+      window.location.href = dest + match[0];
+    } else {
+      window.location.href = url;
     }
-  }, 200);
+  }, 400);
 }
 
-function showToast(msg, type) {
-  var toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.className = 'toast ' + type + ' show';
-  setTimeout(function() { toast.classList.remove('show'); }, 2000);
+function onScanError(err) {
+  // Silencieux — erreurs normales pendant le scan
 }
 
+function startScanner() {
+  scanner = new Html5Qrcode("reader");
+  
+  var config = {
+    fps: 15,
+    qrbox: { width: 220, height: 220 },
+    aspectRatio: 1.0,
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+  };
+  
+  scanner.start(
+    { facingMode: "environment" },
+    config,
+    onScanSuccess,
+    onScanError
+  ).catch(function(err) {
+    document.getElementById('status').textContent = '⚠️ Caméra non disponible — utilisez la recherche ci-dessous';
+    document.getElementById('status').className = 'status error';
+  });
+}
+
+// Lancer le scanner
+startScanner();
+
+// Recherche manuelle
 var searchTimer;
 function rechercheArticle(q) {
   clearTimeout(searchTimer);
-  var results = document.getElementById('search-results');
+  var results = document.getElementById('results');
   if (q.length < 2) { results.innerHTML = ''; return; }
   searchTimer = setTimeout(function() {
     fetch('/api/recherche-articles?q=' + encodeURIComponent(q))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var html = '';
-        data.slice(0,5).forEach(function(a) {
-          var stockColor = a.stock==0?'#dc2626':a.stock<5?'#d97706':'#16a34a';
+        data.slice(0,6).forEach(function(a) {
+          var color = a.stock==0?'#dc2626':a.stock<5?'#d97706':'#16a34a';
           var href = currentMode==='sortie' ? '/scan/article/'+a.id : '/scan/reception/'+a.id;
           html += '<a href="'+href+'" class="result-item '+currentMode+'">'
                 + '<div class="result-name">'+a.designation+'</div>'
                 + '<div class="result-info">'+a.id+' — 📦 '+a.container
-                + ' — <span style="color:'+stockColor+';font-weight:700">'+a.stock+' '+a.unite+'</span></div>'
+                + ' — <span style="color:'+color+';font-weight:700">'+a.stock+' '+a.unite+'</span></div>'
                 + '</a>';
         });
-        if (!data.length) html = '<div style="text-align:center;font-size:.76rem;color:rgba(255,255,255,.4);padding:10px">Aucun résultat</div>';
+        if (!data.length) html = '<p style="text-align:center;font-size:.76rem;color:rgba(255,255,255,.4);padding:10px">Aucun résultat</p>';
         results.innerHTML = html;
       });
   }, 300);
 }
 
-startCamera();
-if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(function(){});
+// Nettoyage quand on quitte la page
+window.addEventListener('beforeunload', function() {
+  if (scanner) scanner.stop().catch(function(){});
+});
 </script>
 </body>
 </html>
