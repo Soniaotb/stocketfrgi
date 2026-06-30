@@ -852,6 +852,13 @@ def init_db():
 ('ART-611','Gaz & Soudage','Bouteille Oxygène','','Air Liquide',6,'Zone Gaz','UNITE',1,0.0,'Air Liquide',37,5,10,50,0,'Stockage plein air'),
 ('ART-612','Gaz & Soudage','Bouteille Acétylène','','Air Liquide',6,'Zone Gaz','UNITE',1,0.0,'Air Liquide',30,3,8,40,0,'Stockage plein air')
     ]
+    # Migration sécurisée — ajouter delai_livraison si la colonne n'existe pas encore (une seule fois)
+    if USE_POSTGRES:
+        try:
+            c.execute("ALTER TABLE articles ADD COLUMN IF NOT EXISTS delai_livraison INTEGER DEFAULT 0")
+            conn.commit()
+        except Exception:
+            conn.commit()
     for a in articles:
         c.execute("""INSERT INTO articles
             (id,famille,designation,reference,marque,container_id,emplacement,unite,colisage,
@@ -963,16 +970,6 @@ def init_db():
     ]
     for cl in cmd_lignes:
         c.execute("INSERT INTO commande_lignes (commande_id,article_id,quantite,prix_unitaire) VALUES (?,?,?,?)", cl)
-
-    # Migration sécurisée — ajouter delai_livraison si la table existait déjà sans cette colonne
-    try:
-        if USE_POSTGRES:
-            c.execute("ALTER TABLE articles ADD COLUMN IF NOT EXISTS delai_livraison INTEGER DEFAULT 0")
-        else:
-            c.execute("ALTER TABLE articles ADD COLUMN delai_livraison INTEGER DEFAULT 0")
-        conn.commit()
-    except Exception:
-        pass
 
     conn.commit()
     conn.close()
