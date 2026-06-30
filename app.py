@@ -2378,5 +2378,186 @@ def scan_valider_reception(id):
     return render_template('mobile_succes_reception.html',
         article=article, quantite=quantite,
         nouveau_stock=s_apres, numero=numero)
+
+@app.route('/admin/maj-prix-delais')
+@login_required
+def maj_prix_delais():
+    """Route admin pour mettre à jour les prix et délais des articles existants
+    sans toucher au reste — basé sur la désignation."""
+    if session.get('user_role') != 'admin':
+        flash('Accès réservé aux administrateurs','error')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db()
+    updates_prix = [
+        ('PROJECTEUR LED', 200.0, 0),
+        ('GANTS ANTI-COUPURE', 2.7, 0),
+        ('BOMBE DE PEINTURE JAUNE', 16.44, 0),
+        ('BOMBE DE PEINTURE NOIR', 16.44, 0),
+        ('BOMBE DE PEINTURE ROUGE', 16.44, 0),
+        ('LUNETTE TRONCONNAGE JAUNE', 7.34, 0),
+        ('LUNETTE TRONCONNAGE BLEU/ JAUNE', 7.34, 0),
+        ('LUNETTE SECURITE BLANC', 4.01, 0),
+        ('LUNETTE SECURITE SOLAIRE', 4.41, 0),
+        ('GANTS ANTI-COUPURE', 2.7, 0),
+        ('GANTS L ORANGE / NOIR JETABLE', 26.0, 3),
+        ('PULVERISATEUR', 23.11, 0),
+        ('CHIFFONS', 2.2, 3),
+        ('NETTOYANT FREINS 500 ML', 2.2, 3),
+        ('Pompe de transvasement à levier manuel', 95.0, 3),
+        ('Chiffon de nettoyage - tissu mélangé - lavable et réutilisable  10KG', 34.0, 3),
+        ('SAC A GRAVAT', 68.54, 3),
+        ('OLIVE', 10.1, 0),
+        ('BOULON  - Vis à tête hexagonale - ISO 4017/DIN 933 - acier 8.8 zingué (A2K) - filetage total - M10x70 mm - 6 pans extérieurs SW16', 0.21, 3),
+        ('FRAISE 13,5', 44.96, 0),
+        ('FRAISE 23', 48.95, 4),
+        ('BOULON   - Vis à tête cylindrique CHc - ISO 4762/DIN 912 - acier 12.9 brut - filetage partiel - M16x45 mm - 6 pans creux IS14', 0.6, 3),
+        ('ECROU AUTOFREINES', 14.5, 3),
+        ('VIS A BOIS', 27.02, 3),
+        ('MASTIQUE ACRYLIQUE', 1.18, 0),
+        ('DISQUE 230X3,2', 4.56, 0),
+        ('CASQUE ANTI-BRUIT', 11.94, 0),
+        ('DISQUE', 1.69, 0),
+        ('RUBAN A MESURER    DECAMETRE', 63.6, 3),
+        ('ETIQUETTES SAC PRELEVEMENT', 12.65, 7),
+        ('KIT ABSORBANT', 33.5, 3),
+        ('DISQUE A TRONCONNER 360', 5.2, 0),
+        ('NETTOYANT FREIN 5L', 28.14, 3),
+        ('Graisse travaux publics et matériels agricoles - Lithium NLGI 2 - 5 kg - bidon en fer-blanc - bleu', None, 3),
+        ('COMBINAISON BLANCHE TAILLE LG', 11.37, 0),
+        ('TRACEUR DE CHANTIER BLANC', 2.95, 3),
+        ('TRACEUR DE CHANTIER ROUGE', 2.95, 3),
+        ('TRACEUR DE CHANTIER JAUNE', 2.95, 3),
+        ('TRACEUR DE CHANTIER BLEU', 2.95, 3),
+        ('TRUELLE 22CM', 4.6, 0),
+        ('AMPOULE', 3.11, 3),
+        ('SABLE ABSORBANT  20L', 9.18, 3),
+        ('Mèche de forage métrique TE-CX (SDS Plus)', 4.91, 2),
+        ('BOULON', 0.18, 3),
+        ('COFFRET TOURNEVIS', None, 3),
+        ('LAME CUTTER', 51.24, 3),
+        ('LAME CUTTER', 110.0, 3),
+        ('Jauge de précision', 10.9, 3),
+        ('Thermomètre à rail', 79.7, 0),
+        ('MARQUEUR BLANC', 2.98, 3),
+        ('CUTTER', None, 3),
+        ('CLE HEXAGONAL', 8.82, 3),
+        ('ELEMENT RADAR PEDAGOGIQUE', 1498.99, 0),
+        ('FILLIERE DE FILTAGE', 69.0, 0),
+        ('DOUILLE 17', 13.28, 3),
+        ('DOUILLE 38', 62.0, 0),
+        ('BIG BAG', 2.49, 6),
+        ('NETTOYANT FREIN 20 L', 71.04, 3),
+        ('DEGRIPPANT  20L', 86.32, 3),
+        ('BIG BAG', 6.9, 0),
+        ('Meuleuse d`angle électrique 230 mm EWS 24-230-T', None, 3),
+        ('GANTS CUIRE BLANC T11', None, 3),
+        ('PORTE AFFICHE', 15.49, 0),
+        ('BOUCHONS D`OREILLE', 1.39, 3),
+        ('ODOMETRE', 65.31, 0),
+        ('SPATULE', 31.8, 0),
+        ('BROSSE METALIQUE', 7.06, 0),
+        ('CHAINE 25M', 74.75, 0),
+        ('COMBINAISON DE PROTECTION LG', 11.37, 0),
+        ('COMBINAISON DE PROTECTION MD', 11.37, 0),
+        ('COMBINAISON DE PROTECTION XL', 11.37, 0),
+        ('COMBINAISON DE PROTECTION 3XL', 11.37, 0),
+        ('Gants de Soudeur W-110 EN 388, 420 et 12477A - taille 10', 22.0, 3),
+        ('Gants de Soudeur W-110 EN 388, 420 et 12477A - taille 9', 22.0, 3),
+        ('Gant soudeur BLUE WELDER', 29.35, 0),
+        ('LAMPE FRONTALE (LEDLENSER)', 64.47, 2),
+        ('LAMPE FRONTAL (XLANDER)', 43.4, 0),
+        ('CLIPS CROCH LAMPE (4)', 4.19, 2),
+        ('GUETRE DE TRONCONNAGES', 116.0, 30),
+        ('PILE AAA LR3', 3.9, 0),
+        ('ELINGUE', 87.03, 3),
+        ('ELINGUE', 24.2, 3),
+        ('ELINGUE', 22.0, 3),
+        ('BURIN MECANICIEN', 21.41, 3),
+        ('CLE 36 PLATE', None, 3),
+        ('CLE 32 PLATE', None, 3),
+        ('CLE 22 PLATE', None, 3),
+        ('CLE 19 PLAT A', None, 3),
+        ('TOURNEVISE PLAT 1X 5,5', None, 3),
+        ('CLE 4 ALAINE', None, 3),
+        ('CLE A MOLETTE', None, 3),
+        ('SERINGUE', None, 3),
+        ('MASQUE AIR FIT', 3.46, 0),
+        ('BACHE DE SOUDURE ANTI-FEU', 105.0, 0),
+        ('METRE (10M)', 30.2, 0),
+        ('METRE (8M)', 30.14, 0),
+        ('METRE (5M)', 3.04, 0),
+        ('LINGETTE NETTOYANTE POUR LES MAINS', 34.63, 0),
+        ('LINGETTE IMPREGNEES UNIVERSELLES', 12.7, 3),
+        ('RUBALISE', 2.8, 0),
+        ('SIKATOP 122 FR', 95.48, 0),
+        ('4T', 53.2, 30),
+        ('2T', 53.2, 30),
+        ('DISQUE 230X8.0X22,2', 24.5, 3),
+        ('BOITE OUTIL', 150.9, 3),
+        ('ENROBE A FROID NOIR 25KG', 29.0, 3),
+        ('GRAISSE POUR AIGUILLE', 78.6, 0),
+        ('TAPIS ROUGE', 90.58, 0),
+        ('ABSORBANT', 158.0, 7),
+        ('FEUILLARD / CERCLAGE', 92.99, 0),
+        ('SANGLES EN 1M', 3.27, 0),
+        ('FOURCHE A CAILLOUX', None, 3),
+        ('MANCHE PIOCHE EN PLASTIQUE', 14.11, 0),
+        ('MANCHE PIOCHE EN BOIS', 8.1, 0),
+        ('RATEAUX SANS MANCHE', 25.1, 3),
+        ('PELLE RONDE SANS MANCHE', 7.32, 3),
+        ('PELLE CARRE', 10.55, 3),
+        ('BONBONNE   3L', 184.5, 0),
+        ('BALAIS  ATELIER', 10.0, 0),
+        ('BALAYETTE', 4.34, 0),
+        ('MAILLET BLANC', 202.31, 0),
+        ('FOURCHE A CAILLOUX AVEC MANCHE', 68.83, 0),
+        ('PROTEGE FOURCHE', 465.0, 4),
+        ('PROTEGE FOURCHE', 298.0, 21),
+        ('CHARRUE A BALLAST', 267.0, 0),
+        ('VIS M10X60', 0.18, 0),
+        ('ECROUS HEXAGONAUX COMBINES', 27.08, 5),
+        ('VIS A TETE HEXAGONALE  M10X60  BOULON', 23.91, 5),
+        ('CRAIE POUR STEATITE', 0.72, 0),
+        ('GRILLAGE ORANGE', 33.5, 0),
+        ('GUIDE CHAINE DE 40', 61.1, 2),
+        ('CHAINE DE 40', 26.34, 2),
+        ('POMPE ROTATIVE ADBLUE', 247.8, 13),
+        ('ELINGUE 10T 6M', 123.0, 0),
+        ('SANGLE 6T 9M', 21.96, 0),
+        ('SAC DE PRELEVMENT  X1000', 1.37, 7),
+        ('COURONNE B 47/320 SP-L UNIV EN 47', 149.28, 0),
+    ]
+    
+    def normalize(s):
+        import re
+        return re.sub(r'[^A-Z0-9]', '', s.upper())
+    
+    # Récupérer tous les articles actuels
+    articles = conn.execute("SELECT id, designation FROM articles WHERE actif=1").fetchall()
+    lookup = {}
+    for a in articles:
+        key = normalize(a['designation'])
+        lookup[key] = a['id']
+    
+    nb_prix = 0
+    nb_delai = 0
+    for desig, prix, delai in updates_prix:
+        key = normalize(desig)
+        if key in lookup:
+            art_id = lookup[key]
+            if prix is not None:
+                conn.execute("UPDATE articles SET prix_achat=? WHERE id=?", (prix, art_id))
+                nb_prix += 1
+            if delai and delai > 0:
+                conn.execute("UPDATE articles SET delai_livraison=? WHERE id=?", (delai, art_id))
+                nb_delai += 1
+    
+    conn.commit()
+    conn.close()
+    
+    flash(f'Mise à jour terminée : {nb_prix} prix et {nb_delai} délais mis à jour','success')
+    return redirect(url_for('catalogue'))
+
 if __name__ == '__main__':
     app.run(debug=False)
