@@ -2797,5 +2797,79 @@ def restaurer_articles():
     flash(f'Restauration : {nb} articles restaurés !','success')
     return redirect(url_for('catalogue'))
 
+
+@app.route('/admin/supprimer-argon')
+@login_required
+def supprimer_argon():
+    """Supprime tous les articles ARGON et non officiels de Supabase."""
+    if session.get('user_role') != 'admin':
+        flash('Accès réservé','error')
+        return redirect(url_for('dashboard'))
+    conn = get_db()
+    # Supprimer tous les articles dont la désignation contient ARGON
+    conn.execute("UPDATE articles SET actif=0 WHERE LOWER(designation) LIKE '%argon%'")
+    # Supprimer aussi les articles avec des IDs > 612 qui ne sont pas officiels
+    conn.execute("UPDATE articles SET actif=0 WHERE id > 'ART-612' AND id NOT IN ('ART-611','ART-612')")
+    conn.commit()
+    
+    # Compter ce qui reste
+    total = conn.execute("SELECT COUNT(*) FROM articles WHERE actif=1").fetchone()[0]
+    conn.close()
+    flash(f'Articles ARGON supprimés ! Total restant : {total}','success')
+    return redirect(url_for('catalogue'))
+
+
+@app.route('/admin/restaurer-bouteilles')
+@login_required  
+def restaurer_bouteilles():
+    """Restaure les bouteilles gaz ART-611 et ART-612."""
+    if session.get('user_role') != 'admin':
+        flash('Accès réservé','error')
+        return redirect(url_for('dashboard'))
+    conn = get_db()
+    bouteilles = [
+        ('ART-611','Gaz & Soudage','Bouteille Oxygène','','Air Liquide',6,'Zone Gaz','UNITE',1,0.0,'Air Liquide',37,5,10,0,0,'Stockage plein air'),
+        ('ART-612','Gaz & Soudage','Bouteille Acétylène','','Air Liquide',6,'Zone Gaz','UNITE',1,0.0,'Air Liquide',30,3,8,0,0,'Stockage plein air'),
+    ]
+    for b in bouteilles:
+        conn.execute("""INSERT INTO articles
+            (id,famille,designation,reference,marque,container_id,emplacement,unite,colisage,
+             prix_achat,fournisseur,stock,stock_min,stock_alerte,stock_max,delai_livraison,observations,actif)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+            ON CONFLICT(id) DO UPDATE SET actif=1,stock=EXCLUDED.stock""", b + (1,))
+    conn.commit()
+    conn.close()
+    flash('Bouteilles Oxygène et Acétylène restaurées !','success')
+    return redirect(url_for('catalogue'))
+
+
+@app.route('/admin/corriger-gaz')
+@login_required  
+def corriger_gaz():
+    """Déplace les bouteilles gaz vers Zone Gaz et supprime ARGON."""
+    if session.get('user_role') != 'admin':
+        flash('Accès réservé','error')
+        return redirect(url_for('dashboard'))
+    conn = get_db()
+    
+    # Supprimer ARGON
+    conn.execute("UPDATE articles SET actif=0 WHERE LOWER(designation) LIKE '%argon%'")
+    
+    # Déplacer bouteilles oxygène et acétylène vers Zone Gaz (container_id=6)
+    conn.execute("""UPDATE articles SET container_id=6 
+        WHERE LOWER(designation) LIKE '%bouteille%' 
+        AND (LOWER(designation) LIKE '%oxygene%' OR LOWER(designation) LIKE '%oxygène%'
+        OR LOWER(designation) LIKE '%acetylene%' OR LOWER(designation) LIKE '%acétylène%')""")
+    
+    conn.commit()
+    total = conn.execute("SELECT COUNT(*) FROM articles WHERE actif=1").fetchone()[0]
+    gaz = conn.execute("SELECT designation, container_id FROM articles WHERE LOWER(designation) LIKE '%bouteille%' AND actif=1").fetchall()
+    conn.close()
+    
+    msg = f'Corrections effectuées ! Total: {total} articles. '
+    msg += ' | '.join([f"{g[0]} → container {g[1]}" for g in gaz])
+    flash(msg, 'success')
+    return redirect(url_for('catalogue'))
+
 if __name__ == '__main__':
     app.run(debug=False)
